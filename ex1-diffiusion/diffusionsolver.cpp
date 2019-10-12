@@ -12,12 +12,12 @@ DiffusionSolver::DiffusionSolver()
 
 void DiffusionSolver::init()
 {
-    std::cerr << "Initializing diffusion vector, params: " << std::endl
-              << "N = " << N << std::endl
-              << "L = " << L << std::endl
-              << "DX = " << DX << std::endl
-              << "ALPHA = " << ALPHA << std::endl
-              << "DT = " << DT << std::endl;
+//    std::cerr << "Initializing diffusion vector, params: " << std::endl
+//              << "N = " << N << std::endl
+//              << "L = " << L << std::endl
+//              << "DX = " << DX << std::endl
+//              << "ALPHA = " << ALPHA << std::endl
+//              << "DT = " << DT << std::endl;
 
     for (int i = 0; i < N; ++i) {
         // do not accumulate summation errors
@@ -30,7 +30,7 @@ void DiffusionSolver::solve(double t_f)
 {
     int nit = std::ceil(t_f/DT);
 
-    std::cerr << "Starting " << nit << " iterations now" << std::endl;
+//    std::cerr << "Starting " << nit << " iterations now" << std::endl;
 
     for (int n = 0; n < nit; ++n) {
         doStep();
