@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <cmath>
+#include <omp.h>
 // TODO 1: add OpenMP headers
 
 
@@ -46,6 +47,7 @@ std::vector<double> GetHistogram(const std::vector<double>& xx) {
 
 int main(int argc, char *argv[]) {
   if (argc < 2 || argc > 3 || std::string(argv[1]) == "-h") {
+    fprintf(stderr, "open threads: %d\n", omp_get_num_threads()); // REMOVE ME
     fprintf(stderr, "usage: %s N M\n", argv[0]);
     fprintf(stderr, "Brownian motion of N paritcles in M steps in time");
     return 1;
