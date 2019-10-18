@@ -5,7 +5,10 @@
 #include <iostream>
 #include <cmath>
 #include <omp.h>
-// TODO 1: add OpenMP headers
+
+#include <map>
+#include <set>
+#include <algorithm>
 
 
 // evolution time
@@ -27,10 +30,9 @@ void WriteHistogram(const std::vector<double>& hh, std::string name) {
   }
 }
 
-// TODO 1: implement using OpenMP
 // Returns current wall-clock time in seconds
 double GetWtime() {
-  return 0;
+  return omp_get_wtime();
 }
 
 // TODO 3: parallelize with OpenMP
@@ -60,36 +62,49 @@ int main(int argc, char *argv[]) {
   // time step
   double dt = tmax / M;
 
-  // Seed generator
-  int seed = 19;
-  std::default_random_engine gen(seed);
 
-  // Initialize particles
-  std::vector<double> xx(N);
+  std::default_random_engine gen;
+
+  auto random = gen();
+// parallel seed
+#pragma omp parallel firstprivate(gen)
   {
-    std::uniform_real_distribution<double> dis(-0.5, 0.5);
-    for (size_t i = 0; i < N; ++i) {
-      xx[i] = dis(gen);
-    }
+      // Seed generator
+      int seed = (omp_get_thread_num() + 1) * random % gen.max();
+      gen.seed(seed);
+  }
+
+  std::vector<double> xx(N);
+  // parallel initialization
+  std::uniform_real_distribution<double> dis(-0.5, 0.5);
+
+#pragma omp parallel for shared(xx) firstprivate(dis)
+  for (size_t i = 0; i < N; ++i) {
+    xx[i] = dis(gen);
   }
 
   WriteHistogram(GetHistogram(xx), "hist_0.dat");
 
   double wt0, wt1;
 
-  // Perform M steps of random walks and measure time
-  // TODO 2: parallelize with OpenMP
   double t = 0;
+  // Perform M steps of random walks and measure time
   wt0 = GetWtime();
+
+
+
+//#pragma omp parallel shared(xx)
   {
-    for (size_t m = 0; m < M; ++m) {
-      std::normal_distribution<double> dis(0., std::sqrt(dt));
-      for (size_t i = 0; i < N; ++i) {
-        xx[i] += dis(gen);
+    std::normal_distribution<double> dis2(0., std::sqrt(dt));
+
+#pragma omp parallel for shared(xx) firstprivate(dis2)
+    for (size_t i = 0; i < N; ++i) {
+      for (size_t m = 0; m < M; ++m) {
+        xx[i] += dis2(gen);
       }
-      t += dt * M;
     }
   }
+
   wt1 = GetWtime();
   double wtime_walk = wt1 - wt0;
 
