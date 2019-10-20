@@ -6,9 +6,7 @@
 #include <cmath>
 #include <omp.h>
 
-#include <map>
-#include <set>
-#include <algorithm>
+#include "cacheflusher.h"
 
 
 // evolution time
@@ -62,8 +60,11 @@ int main(int argc, char *argv[]) {
   // time step
   double dt = tmax / M;
 
+  CacheFlusher cf;
+
 
   for (int k = 1; k <= 24; ++k) {
+    cf.flush();
     omp_set_num_threads(k);
 
     std::vector<double> xx(N);
