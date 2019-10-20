@@ -39,24 +39,25 @@ std::vector<double> GetHistogram(const std::vector<double>& xx) {
   std::vector<double> hh(nb, 0);
   std::vector<std::vector<double>> hh_t(omp_get_max_threads(), std::vector<double>(nb, 0));
 #pragma omp parallel shared(hh, hh_t)
+  {
 #pragma omp for
-  for (size_t i = 0; i < xx.size(); ++i) {
-    int j = (xx[i] - xmin) / (xmax - xmin) * nb;
-    j = std::max(0, std::min(int(nb) - 1, j));
-    hh_t[omp_get_thread_num()][j] += 1;
-  }
-#pragma omp for
-  for (size_t i = 0; i < nb; ++i) {
-      for (size_t j = 0; j < omp_get_max_threads(); ++j) {
-          hh[i] += hh_t[j][i];
-      }
+    for (size_t i = 0; i < xx.size(); ++i) {
+      int j = (xx[i] - xmin) / (xmax - xmin) * nb;
+      j = std::max(0, std::min(int(nb) - 1, j));
+      hh_t[omp_get_thread_num()][j] += 1;
+    }
+#pragma omp for // no collapse here to avoid eventual race conditions
+    for (size_t i = 0; i < nb; ++i) {
+        for (size_t j = 0; j < omp_get_max_threads(); ++j) {
+            hh[i] += hh_t[j][i];
+        }
+    }
   }
   return hh;
 }
 
 int main(int argc, char *argv[]) {
   if (argc < 2 || argc > 3 || std::string(argv[1]) == "-h") {
-    fprintf(stderr, "open threads: %d\n", omp_get_num_threads()); // REMOVE ME
     fprintf(stderr, "usage: %s N M\n", argv[0]);
     fprintf(stderr, "Brownian motion of N paritcles in M steps in time");
     return 1;
@@ -74,17 +75,15 @@ int main(int argc, char *argv[]) {
 
   for (int k = 1; k <= 24; ++k) {
     cf.flush();
-    omp_set_nested(2);
+
     omp_set_num_threads(k);
 
     std::vector<double> xx(N), xx0(N);
     double wt0, wt1;
     double wtime_walk;
 
-
-
     // seed
-  #pragma omp parallel shared(xx)
+#pragma omp parallel shared(xx)
     {
       std::default_random_engine gen;
 
@@ -95,31 +94,26 @@ int main(int argc, char *argv[]) {
 
       // parallel initialization
       std::uniform_real_distribution<double> dis(-0.5, 0.5);
-
-  #pragma omp for
+#pragma omp for
       for (size_t i = 0; i < N; ++i) {
         xx[i] = dis(gen);
       }
 
-  #pragma omp single
+#pragma omp single
       {
         xx0 = xx;
-//        WriteHistogram(GetHistogram(xx), "hist_0.dat");
-
-        // Perform M steps of random walks and measure time
         wt0 = GetWtime();
       }
 
       std::normal_distribution<double> dis2(0., std::sqrt(dt));
-
-  #pragma omp for
+#pragma omp for
       for (size_t i = 0; i < N; ++i) {
         for (size_t m = 0; m < M; ++m) {
           xx[i] += dis2(gen);
         }
       }
 
-  #pragma omp single // spawning threads in GetHistogram again --> use master
+#pragma omp single
       {
         wt1 = GetWtime();
         wtime_walk = wt1 - wt0;
