@@ -37,10 +37,19 @@ double GetWtime() {
 // Returns histogram of positions xx in range [xmin,xmax] with nb bins
 std::vector<double> GetHistogram(const std::vector<double>& xx) {
   std::vector<double> hh(nb, 0);
+  std::vector<std::vector<double>> hh_t(omp_get_max_threads(), std::vector<double>(nb, 0));
+#pragma omp parallel shared(hh, hh_t)
+#pragma omp for
   for (size_t i = 0; i < xx.size(); ++i) {
     int j = (xx[i] - xmin) / (xmax - xmin) * nb;
     j = std::max(0, std::min(int(nb) - 1, j));
-    hh[j] += 1;
+    hh_t[omp_get_thread_num()][j] += 1;
+  }
+#pragma omp for
+  for (size_t i = 0; i < nb; ++i) {
+      for (size_t j = 0; j < omp_get_max_threads(); ++j) {
+          hh[i] += hh_t[j][i];
+      }
   }
   return hh;
 }
@@ -65,10 +74,12 @@ int main(int argc, char *argv[]) {
 
   for (int k = 1; k <= 24; ++k) {
     cf.flush();
+    omp_set_nested(2);
     omp_set_num_threads(k);
 
-    std::vector<double> xx(N);
+    std::vector<double> xx(N), xx0(N);
     double wt0, wt1;
+    double wtime_walk;
 
 
 
@@ -92,7 +103,8 @@ int main(int argc, char *argv[]) {
 
   #pragma omp single
       {
-        WriteHistogram(GetHistogram(xx), "hist_0.dat");
+        xx0 = xx;
+//        WriteHistogram(GetHistogram(xx), "hist_0.dat");
 
         // Perform M steps of random walks and measure time
         wt0 = GetWtime();
@@ -107,23 +119,26 @@ int main(int argc, char *argv[]) {
         }
       }
 
-  #pragma omp single
+  #pragma omp single // spawning threads in GetHistogram again --> use master
       {
         wt1 = GetWtime();
-        double wtime_walk = wt1 - wt0;
-
-        // Compute histogram and measure time
-        wt0 = GetWtime();
-        auto hh = GetHistogram(xx);
-        wt1 = GetWtime();
-        double wtime_hist = wt1 - wt0;
-
-        WriteHistogram(hh, "hist_1.dat");
-
-        printf("walk & hist with %2d threads: %.16f %.16f\n", omp_get_num_threads(), wtime_walk, wtime_hist);
-//        printf("hist with %2d threads: \n", omp_get_num_threads(), );
-        fflush(stdout);
+        wtime_walk = wt1 - wt0;
       }
     }
+
+
+    WriteHistogram(GetHistogram(xx0), "hist_0.dat");
+
+    // Compute histogram and measure time
+    wt0 = GetWtime();
+    auto hh = GetHistogram(xx);
+    wt1 = GetWtime();
+    double wtime_hist = wt1 - wt0;
+
+    WriteHistogram(hh, "hist_1.dat");
+
+    printf("walk & hist with %2d threads: %.16f %.16f\n", omp_get_max_threads(), wtime_walk, wtime_hist);
+//        printf("hist with %2d threads: \n", omp_get_num_threads(), );
+    fflush(stdout);
   }
 }
