@@ -67,63 +67,65 @@ int main(int argc, char *argv[]) {
     cf.flush();
     omp_set_num_threads(k);
 
+    std::default_random_engine gen;
+
+    auto random = gen();
+  // parallel seed
+  #pragma omp parallel firstprivate(gen)
+    {
+        // Seed generator
+        int seed = (omp_get_thread_num() + 1) * random % gen.max();
+        gen.seed(seed);
+    }
+
     std::vector<double> xx(N);
+    // parallel initialization
+    std::uniform_real_distribution<double> dis(-0.5, 0.5);
+
+  #pragma omp parallel for shared(xx) firstprivate(dis)
+    for (size_t i = 0; i < N; ++i) {
+      xx[i] = dis(gen);
+    }
+
+    WriteHistogram(GetHistogram(xx), "hist_0.dat");
+
     double wt0, wt1;
 
+    double t = 0;
+    // Perform M steps of random walks and measure time
+    wt0 = GetWtime();
 
 
-    // seed
-  #pragma omp parallel shared(xx)
+
+  //#pragma omp parallel shared(xx)
     {
-      std::default_random_engine gen;
-
-      auto random = gen();
-      // Seed generator
-      int seed = (omp_get_thread_num() + 1) * random % gen.max();
-      gen.seed(seed);
-
-      // parallel initialization
-      std::uniform_real_distribution<double> dis(-0.5, 0.5);
-
-  #pragma omp for
-      for (size_t i = 0; i < N; ++i) {
-        xx[i] = dis(gen);
-      }
-
-  #pragma omp single
-      {
-        WriteHistogram(GetHistogram(xx), "hist_0.dat");
-
-        // Perform M steps of random walks and measure time
-        wt0 = GetWtime();
-      }
-
       std::normal_distribution<double> dis2(0., std::sqrt(dt));
 
-  #pragma omp for
+  #pragma omp parallel for shared(xx) firstprivate(dis2)
       for (size_t i = 0; i < N; ++i) {
         for (size_t m = 0; m < M; ++m) {
           xx[i] += dis2(gen);
         }
       }
-
-  #pragma omp single
-      {
-        wt1 = GetWtime();
-        double wtime_walk = wt1 - wt0;
-
-        // Compute histogram and measure time
-        wt0 = GetWtime();
-        auto hh = GetHistogram(xx);
-        wt1 = GetWtime();
-        double wtime_hist = wt1 - wt0;
-
-        WriteHistogram(hh, "hist_1.dat");
-
-        printf("walk & hist with %2d threads: %.16f %.16f\n", omp_get_num_threads(), wtime_walk, wtime_hist);
-//        printf("hist with %2d threads: \n", omp_get_num_threads(), );
-        fflush(stdout);
-      }
     }
-  }
+
+    wt1 = GetWtime();
+    double wtime_walk = wt1 - wt0;
+
+    // Compute histogram and measure time
+    wt0 = GetWtime();
+    auto hh = GetHistogram(xx);
+    wt1 = GetWtime();
+    double wtime_hist = wt1 - wt0;
+
+    WriteHistogram(hh, "hist_1.dat");
+
+    //printf("walk: %.16f\n", wtime_walk);
+    //printf("hist: %.16f\n", wtime_hist);
+
+    printf("walk & hist with %2d threads: %.16f %.16f\n", k, wtime_walk, wtime_hist);
+    //        printf("hist with %2d threads: \n", omp_get_num_threads(), );
+    fflush(stdout);
+
+  } // for loop
 }
