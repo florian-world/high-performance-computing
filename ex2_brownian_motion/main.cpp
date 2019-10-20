@@ -62,18 +62,20 @@ int main(int argc, char *argv[]) {
 
   CacheFlusher cf;
 
-  for (size_t k = 1; k <= 24; ++k) {
+
+  for (int k = 1; k <= 24; ++k) {
     cf.flush();
     omp_set_num_threads(k);
 
-    std::vector<std::default_random_engine> gens(k);
+    std::default_random_engine gen;
 
+    auto random = gen();
   // parallel seed
-  #pragma omp parallel
+  #pragma omp parallel firstprivate(gen)
     {
-      // Seed generator
-      int seed = (omp_get_thread_num() + 1) * 9872 % 87;
-      gens[omp_get_thread_num()].seed(seed);
+        // Seed generator
+        int seed = (omp_get_thread_num() + 1) * random % gen.max();
+        gen.seed(seed);
     }
 
     std::vector<double> xx(N);
@@ -82,7 +84,7 @@ int main(int argc, char *argv[]) {
 
   #pragma omp parallel for shared(xx) firstprivate(dis)
     for (size_t i = 0; i < N; ++i) {
-      xx[i] = dis(gens[omp_get_thread_num()]);
+      xx[i] = dis(gen);
     }
 
     WriteHistogram(GetHistogram(xx), "hist_0.dat");
@@ -95,14 +97,14 @@ int main(int argc, char *argv[]) {
 
 
 
-  #pragma omp parallel shared(xx)
+  //#pragma omp parallel shared(xx)
     {
       std::normal_distribution<double> dis2(0., std::sqrt(dt));
 
-  #pragma omp for
+  #pragma omp parallel for shared(xx) firstprivate(dis2)
       for (size_t i = 0; i < N; ++i) {
         for (size_t m = 0; m < M; ++m) {
-          xx[i] += dis2(gens[omp_get_thread_num()]);
+          xx[i] += dis2(gen);
         }
       }
     }
