@@ -2,13 +2,12 @@ cmake_minimum_required(VERSION 2.8)
 
 
 
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 project(pca)
 
-set(ON_EULER false)
+set(ON_EULER True)
 
 set( project_sources
    main.cpp
@@ -21,20 +20,19 @@ add_executable(${PROJECT_NAME}
 )
 
 
-set(BLA_DEFINITIONS)
-
 find_package(OpenMP)
-include_directories(${MKL_INCLUDE_DIR})
 target_link_libraries(${PROJECT_NAME} PUBLIC OpenMP::OpenMP_CXX)
 
 
 # on euler
-if (ON_EULER)
-  set(MKL_CXXFLAGS "-DMKL_ILP64 -m64 -I${MKLROOT}/include")
-  set(MKL_LDFLAGS "-Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_gnu_thread.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lgomp -lpthread -lm -ldl")
+if (${ON_EULER})
+  set(MKL_CXXFLAGS "-DMKL_ILP64 -m64 -I$ENV{MKLROOT}/include")
+  set(MKL_LDFLAGS "-Wl,--start-group $ENV{MKLROOT}/lib/intel64/libmkl_intel_ilp64.a $ENV{MKLROOT}/lib/intel64/libmkl_gnu_thread.a $ENV{MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lgomp -lpthread -lm -ldl")
   target_compile_options(${PROJECT_NAME} PUBLIC ${MKL_CXXFLAGS})
   target_link_libraries(${PROJECT_NAME} PUBLIC ${MKL_LDFLAGS})
 else()
+  list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+  include_directories(${MKL_INCLUDE_DIR})
   # user defined options for MKL
   option(MKL_USE_parallel "Use MKL parallel" True)
   option(MKL_USE_sdl "Single Dynamic Library or static/dynamic" False)
