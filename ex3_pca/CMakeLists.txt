@@ -8,8 +8,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 project(pca)
 
-
-
+set(ON_EULER false)
 
 set( project_sources
    main.cpp
@@ -24,27 +23,25 @@ add_executable(${PROJECT_NAME}
 
 set(BLA_DEFINITIONS)
 
-if ("$ENV{MKLROOT}" STREQUAL "")
-    message(FATAL_ERROR "MKLROOT is not set. Please source the Intel MKL mklvars.sh file.")
-endif()
-
-# user defined options for MKL
-option(MKL_USE_parallel "Use MKL parallel" True)
-option(MKL_USE_sdl "Single Dynamic Library or static/dynamic" False)
-set(MKL_USE_interface "lp64" CACHE STRING "for Intel(R)64 compatible arch: ilp64/lp64 or for ia32 arch: cdecl/stdcall")
-
-if (BLA_VENDOR MATCHES "_seq")
-    set(MKL_USE_parallel OFF)
-else()
-    set(MKL_USE_parallel ON)
-endif()
-
-
 find_package(OpenMP)
-find_package(MKL REQUIRED)
 include_directories(${MKL_INCLUDE_DIR})
-target_link_libraries(${PROJECT_NAME} ${MKL_LIBRARIES})
 target_link_libraries(${PROJECT_NAME} PUBLIC OpenMP::OpenMP_CXX)
+
+
+# on euler
+if (ON_EULER)
+  set(MKL_CXXFLAGS "-DMKL_ILP64 -m64 -I${MKLROOT}/include")
+  set(MKL_LDFLAGS "-Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_gnu_thread.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lgomp -lpthread -lm -ldl")
+  target_compile_options(${PROJECT_NAME} PUBLIC ${MKL_CXXFLAGS})
+  target_link_libraries(${PROJECT_NAME} PUBLIC ${MKL_LDFLAGS})
+else()
+  # user defined options for MKL
+  option(MKL_USE_parallel "Use MKL parallel" True)
+  option(MKL_USE_sdl "Single Dynamic Library or static/dynamic" False)
+  set(MKL_USE_interface "lp64" CACHE STRING "for Intel(R)64 compatible arch: ilp64/lp64 or for ia32 arch: cdecl/stdcall")
+  find_package(MKL REQUIRED)
+  target_link_libraries(${PROJECT_NAME} ${MKL_LIBRARIES})
+endif()
 
 set( project_headers
     cacheflusher.h
