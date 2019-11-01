@@ -10,7 +10,6 @@ public:
             buf(new volatile unsigned char[size])
         {}
 
-
     ~CacheFlusher()
     {
         delete[] buf;

@@ -1,17 +1,16 @@
 cmake_minimum_required(VERSION 2.8)
 
 
-
-
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 project(pca)
 
-set(ON_EULER True)
+set(ON_EULER False)
 
 set( project_sources
    main.cpp
    cacheflusher.cpp
+   code/utils.cpp
 )
 
 # Create executable with all necessary source files
@@ -41,8 +40,9 @@ else()
   target_link_libraries(${PROJECT_NAME} ${MKL_LIBRARIES})
 endif()
 
-set( project_headers
+set(project_headers
     cacheflusher.h
+    code/utils.h
 )
 
 add_custom_target(headers SOURCES ${project_headers})
