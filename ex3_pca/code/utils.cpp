@@ -8,6 +8,13 @@ using namespace std;
 #define SQUARE(BASE) ((BASE) * (BASE))
 #endif
 
+#ifndef RMJ
+#define RMJ(i,j,rows,cols) (i*cols+j)
+#endif
+#ifndef CMJ
+#define CMJ(i,j,rows,cols) (j*rows+i)
+#endif
+
 double *utils::loadDataset(const std::string &data_path, const int N, const int D)
 {
   // Input file stream object to read data
@@ -257,7 +264,7 @@ void utils::standardizeColMajor(double *data_T, const double * const mean, const
 #pragma omp parallel for
   for (int d = 0; d < D; ++d) {
     for (int n = 0; n < N; ++n) {
-      data_T[d*N+d] = (data_T[d*N+d] - mean[d]) / std[d];
+      data_T[d*N+n] = (data_T[d*N+n] - mean[d]) / std[d];
     }
   }
 
@@ -275,7 +282,7 @@ void utils::centerDataColMajor(double *data_T, const double * const mean, const 
 #pragma omp parallel for
   for (int d = 0; d < D; ++d) {
     for (int n = 0; n < N; ++n) {
-      data_T[d*N + d] = data_T[d*N + d] - mean[d];
+      data_T[d*N+n] = data_T[d*N+n] - mean[d];
     }
   }
 
@@ -399,7 +406,27 @@ void utils::getEigenvectors(double *V, const double * const C, const int NC, con
 
   // TODO:
 
+//  auto norms = computeComponentNorms(C, NC, D);
 
+  for (int i = 0; i < D; ++i) {
+    for (int j = 0; j < D; ++j) {
+      std::cout << C[RMJ(i,j,D,D)] << " ";
+    }
+    std::cout << std::endl;
+  }
+
+  for (int n = 0; n < NC; ++n) {
+    for (int d = 0; d < D; ++d) {
+      V[RMJ(n,d,D,NC)] = C[RMJ((NC-1-n),d,D,D)];
+    }
+  }
+
+  for (int i = 0; i < D; ++i) {
+    for (int j = 0; j < NC; ++j) {
+      std::cout << V[RMJ(i,j,D,NC)] << " ";
+    }
+    std::cout << std::endl;
+  }
 
 
 
@@ -435,15 +462,6 @@ void utils::reconstructDatasetRowMajor(double *data_rec, const double * const V,
   // data_rec(n,d)=data_rec[d + n*D]          # ROW MAJOR
 
   // TODO:
-
-
-
-
-
-
-
-
-
 
 
   // :TODO

@@ -120,14 +120,14 @@ int main (int argc, char** argv)
   // :TODO
 
   time_end = omp_get_wtime();
-  std::cout << "COVARIANCE-MATRIX TIME = " << time_end-time_start << " seconds\n";
+  std::cout << "COVARIANCE-MATRIX TIME = " << time_end - time_start << " seconds\n";
 
-  for (int i = 0; i < D; ++i) {
-    for (int j = 0; j < D; ++j) {
-      std::cout << data_cov[i*D+j] << " ";
-    }
-    std::cout << std::endl;
-  }
+//  for (int i = 0; i < D; ++i) {
+//    for (int j = 0; j < D; ++j) {
+//      std::cout << data_cov[i*D+j] << " ";
+//    }
+//    std::cout << std::endl;
+//  }
 
   /////////////////////////////////////////////////////////////////////////
   // 5. Compute the eigenvalues and eigenvectors of the covariance matrix.
@@ -149,7 +149,17 @@ int main (int argc, char** argv)
   // TODO: First call to dsyen to determine optimal size of work array
   // first call dsyev, determine optimal size of work array
 
+
+
+//  void dsyev( const char* jobz, const char* uplo, const MKL_INT* n, double* a,
+//              const MKL_INT* lda, double* w, double* work, const MKL_INT* lwork,
+//              MKL_INT* info );
+  char readIn = 'U';
+  dsyev(&jobz, &readIn, &D, data_cov, &D, W, work, &lwork, &info);
+
   // :TODO
+
+  std::cout << "Suggested lwork:" << work[0] << std::endl;
 
   lwork = (int)work[0];
   delete[] work;
@@ -157,6 +167,7 @@ int main (int argc, char** argv)
   work = new double[lwork];
 
   // TODO: Second call to dsyen
+  dsyev(&jobz, &readIn, &D, data_cov, &D, W, work, &lwork, &info);
 
   // :TODO
 
