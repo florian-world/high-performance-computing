@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib
+import matplotlib.gridspec
 # matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import os
@@ -9,7 +10,7 @@ from sklearn.decomposition import PCA
 if __name__ == "__main__":
 
   # SELECT YOUR METHOD:
-  #method = "PCA_PYTHON" # REFERENCE SOLUTION (COMPARE YOUR CODE WITH THIS)
+  # method = "PCA_PYTHON" # REFERENCE SOLUTION (COMPARE YOUR CODE WITH THIS)
   method = "PCA" # YOUR CPP IMPLEMENTATION
   # method = "OJA" # YOUR CPP IMPLEMENTATION
 
@@ -97,10 +98,10 @@ if __name__ == "__main__":
     data_std_true = data_std_true.reshape((H, W))
 
 
-    # print(data_mean)
-    # print(np.shape(data_mean))
-    # print(np.min(data_mean))
-    # print(np.max(data_mean))
+    print(data_mean)
+    print(np.shape(data_mean))
+    print(np.min(data_mean))
+    print(np.max(data_mean))
 
     n_max_plot = 8
     if n_components > n_max_plot:

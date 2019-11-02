@@ -33,14 +33,14 @@ int main (int argc, char** argv)
   std::string method_name = "PCA"; // Method name
   std::string data_path = "./data/"+data_name+"_dataset.txt"; // Data path
 
-  // // DATA PARAMETERS
-  // int D = 1850;  // Data dimension
-  // int N = 1280; // Number of training samples
-  // int num_comp = 10; // Number of principal components
-  // std::string data_name = "faces"; // Dataset name
-  // std::string scaler = "standard"; // Which scaler to use
-  // std::string method_name = "PCA"; // Method name
-  // std::string data_path = "./data/"+data_name+"_dataset.txt"; // Data path
+//   // DATA PARAMETERS
+//   int D = 1850;  // Data dimension
+//   int N = 1280; // Number of training samples
+//   int num_comp = 10; // Number of principal components
+//   std::string data_name = "faces"; // Dataset name
+//   std::string scaler = "standard"; // Which scaler to use
+//   std::string method_name = "PCA"; // Method name
+//   std::string data_path = "./data/"+data_name+"_dataset.txt"; // Data path
 
   ///////////////////////////////////////////////////////////////////////////
   // Reading data. The data dimension is N x D.  The returned pointer points
@@ -182,7 +182,7 @@ int main (int argc, char** argv)
   /////////////////////////////////////////////////////////////////////////
   // 6. Extract the principal components & eigenvalues and save them
   utils::reverseArray(W, D);
-  utils::writeRowMajorMatrixToFile("./results/data/"+data_name+method_name+"_eig.txt", W, 1, D);
+  utils::writeRowMajorMatrixToFile("./results/data/"+data_name+method_name+"_eig.txt", W, 1, num_comp);
   delete[] W;
 
   double* V = new double[num_comp * D];

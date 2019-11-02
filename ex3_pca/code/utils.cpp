@@ -77,6 +77,15 @@ int utils::writeRowMajorMatrixToFile(const std::string &data_path, const double 
     oFile << "\n";
   }
   oFile.close();
+
+  std::cout << "Writing to file: " << std::endl;
+
+  for (int i = 0; i < std::min(rows,10); ++i) {
+    for (int j = 0; j < std::min(cols,10); ++j) {
+      std::cout << M[RMJ(i,j,rows,cols)] << " ";
+    }
+    std::cout << std::endl;
+  }
   return 0;
 }
 
@@ -408,8 +417,11 @@ void utils::getEigenvectors(double *V, const double * const C, const int NC, con
 
 //  auto norms = computeComponentNorms(C, NC, D);
 
-  for (int i = 0; i < D; ++i) {
-    for (int j = 0; j < D; ++j) {
+
+  std::cout << "C filled with all Vs: " << std::endl;
+
+  for (int i = 0; i < std::min(D,10); ++i) {
+    for (int j = 0; j < std::min(D,10); ++j) {
       std::cout << C[RMJ(i,j,D,D)] << " ";
     }
     std::cout << std::endl;
@@ -417,17 +429,18 @@ void utils::getEigenvectors(double *V, const double * const C, const int NC, con
 
   for (int n = 0; n < NC; ++n) {
     for (int d = 0; d < D; ++d) {
-      V[RMJ(n,d,D,NC)] = C[RMJ((NC-1-n),d,D,D)];
+      V[RMJ(n,d,NC,D)] = C[RMJ(d,D-n-1,D,D)];
     }
   }
 
-  for (int i = 0; i < D; ++i) {
-    for (int j = 0; j < NC; ++j) {
-      std::cout << V[RMJ(i,j,D,NC)] << " ";
+  std::cout << "V (extracted: " << std::endl;
+
+  for (int i = 0; i < std::min(D,10); ++i) {
+    for (int j = 0; j < std::min(NC,10); ++j) {
+      std::cout << V[RMJ(i,j,NC,D)] << " ";
     }
     std::cout << std::endl;
   }
-
 
 
   // TODO
@@ -462,6 +475,13 @@ void utils::reconstructDatasetRowMajor(double *data_rec, const double * const V,
   // data_rec(n,d)=data_rec[d + n*D]          # ROW MAJOR
 
   // TODO:
+
+  // do data_red * V_r^T
+
+  cblas_dgemm(CBLAS_LAYOUT::CblasRowMajor, CBLAS_TRANSPOSE::CblasNoTrans, CBLAS_TRANSPOSE::CblasNoTrans,
+              N, D, NC, // m n k
+              1.0, data_red, NC, V, D,
+              0.0, data_rec, D);
 
 
   // :TODO
