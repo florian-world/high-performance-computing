@@ -25,6 +25,10 @@ int main (int argc, char** argv)
 {
 
   // DATA PARAMETERS
+
+//#define SIMPLE_DATA_SET
+
+#ifdef SIMPLE_DATA_SET
   int D = 2;  // Data dimension
   int N = 1024; // Number of tra ining samples
   int num_comp = 2; // Number of principal components
@@ -32,16 +36,16 @@ int main (int argc, char** argv)
   std::string scaler = "center"; // Which scaler to use
   std::string method_name = "PCA"; // Method name
   std::string data_path = "./data/"+data_name+"_dataset.txt"; // Data path
-
-//   // DATA PARAMETERS
-//   int D = 1850;  // Data dimension
-//   int N = 1280; // Number of training samples
-//   int num_comp = 10; // Number of principal components
-//   std::string data_name = "faces"; // Dataset name
-//   std::string scaler = "standard"; // Which scaler to use
-//   std::string method_name = "PCA"; // Method name
-//   std::string data_path = "./data/"+data_name+"_dataset.txt"; // Data path
-
+#else
+   // DATA PARAMETERS
+   int D = 1850;  // Data dimension
+   int N = 1280; // Number of training samples
+   int num_comp = 10; // Number of principal components
+   std::string data_name = "faces"; // Dataset name
+   std::string scaler = "standard"; // Which scaler to use
+   std::string method_name = "PCA"; // Method name
+   std::string data_path = "./data/"+data_name+"_dataset.txt"; // Data path
+#endif
   ///////////////////////////////////////////////////////////////////////////
   // Reading data. The data dimension is N x D.  The returned pointer points
   // to the data in row-major order. That is, if (i,j) corresponds to
@@ -159,7 +163,7 @@ int main (int argc, char** argv)
 
   // :TODO
 
-  std::cout << "Suggested lwork:" << work[0] << std::endl;
+  std::cout << "Suggested lwork = " << work[0] << std::endl;
 
   lwork = (int)work[0];
   delete[] work;

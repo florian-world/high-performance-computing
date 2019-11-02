@@ -9,10 +9,10 @@ using namespace std;
 #endif
 
 #ifndef RMJ
-#define RMJ(i,j,rows,cols) (i*cols+j)
+#define RMJ(i,j,rows,cols) ((i)*(cols)+(j))
 #endif
 #ifndef CMJ
-#define CMJ(i,j,rows,cols) (j*rows+i)
+#define CMJ(i,j,rows,cols) ((i)*(j)*(rows))
 #endif
 
 double *utils::loadDataset(const std::string &data_path, const int N, const int D)
@@ -78,14 +78,6 @@ int utils::writeRowMajorMatrixToFile(const std::string &data_path, const double 
   }
   oFile.close();
 
-  std::cout << "Writing to file: " << std::endl;
-
-  for (int i = 0; i < std::min(rows,10); ++i) {
-    for (int j = 0; j < std::min(cols,10); ++j) {
-      std::cout << M[RMJ(i,j,rows,cols)] << " ";
-    }
-    std::cout << std::endl;
-  }
   return 0;
 }
 
@@ -234,7 +226,6 @@ void utils::computeMean(double *mean, const double * const data_T, const int N, 
     }
   }
 
-
   // :TODO
 }
 
@@ -251,7 +242,7 @@ void utils::computeStd(double *std, const double * const mean, const double * co
       // avoid loosing precision due to huge sums -> calculate step wise
       std[d] = (n*std[d] + SQUARE(mean[d] - data_T[d*N+n])) / (n+1);
     }
-    // Bessel's correction -> not needed here (?) to comply with PYTHON results
+    // Bessel's correction -> not needed here to comply with PYTHON results
 //    std[d] = std[d] * N / (N-1);
     std[d] = std::sqrt(std[d]);
   }
@@ -295,8 +286,6 @@ void utils::centerDataColMajor(double *data_T, const double * const mean, const 
     }
   }
 
-
-
   // :TODO
 }
 
@@ -337,71 +326,13 @@ void utils::constructCovariance(double *C, const double * const data_T, const in
 
   // TODO:
 
-//  // note that the output is column major, but it does not matter since it will be symmetric by design
+  // note that the output is column major, but it does not matter since it will be symmetric by design
   double alpha = 1.0 / (N-1);
-
-//  cblas_dgemm(CBLAS_LAYOUT::CblasColMajor, CBLAS_TRANSPOSE::CblasTrans, CBLAS_TRANSPOSE::CblasNoTrans,
-//              D, D, N, // m n k
-//              alpha, data_T, N, data_T, N,
-//              0.0, C, D);
 
   cblas_dgemm(CBLAS_LAYOUT::CblasColMajor, CBLAS_TRANSPOSE::CblasTrans, CBLAS_TRANSPOSE::CblasNoTrans,
               D, D, N, // m n k
               alpha, data_T, N, data_T, N,
               0.0, C, D);
-
-
-//  for (int d_r = 0; d_r < D; ++d_r) {
-//    for (int d_c = 0; d_c < D; ++d_c) {
-//      C[d_r*D+d_c] = 0.0;
-//      for (int n = 0; n < N; ++n) {
-//        C[d_r*D+d_c] += data_T[d_r*N+n]*data_T[d_c*N+n];
-//      }
-//    }
-//  }
-
-
-
-
-//  // DEBUGGING CASE for a simple one (row major though)
-//  const double A[] = {    0.8147,
-//                          0.9058,
-//                          0.1270,
-//                          0.9134,
-//                          0.6324,
-//                          0.0975,
-//                          0.2785,
-//                          0.5469,
-//                          0.9575,
-//                          0.9649,
-//                          0.1576,
-//                          0.9706,
-//                          0.9572,
-//                          0.4854,
-//                          0.8003,
-//                          0.1419};
-
-//  const int NUM_COLS = 2;
-//  const int NUM_ROWS = 8;
-
-//  double Q[NUM_COLS*NUM_COLS];
-
-//  cblas_dgemm(CBLAS_LAYOUT::CblasRowMajor, CBLAS_TRANSPOSE::CblasTrans, CBLAS_TRANSPOSE::CblasNoTrans,
-//              NUM_COLS, NUM_COLS, NUM_ROWS, // m n k
-//              1.0, A, NUM_COLS, A, NUM_COLS,
-//              0.0, Q, NUM_COLS);
-
-////  cblas_dgemm(CBLAS_LAYOUT::CblasColMajor, CBLAS_TRANSPOSE::CblasTrans, CBLAS_TRANSPOSE::CblasNoTrans,
-////              NUM_COLS, NUM_COLS, NUM_ROWS, // m n k
-////              1.0, A, NUM_ROWS, A, NUM_ROWS,
-////              0.0, Q, NUM_COLS);
-
-//  for (int i = 0; i < NUM_COLS; ++i) {
-//    for (int j = 0; j < NUM_COLS; ++j) {
-//      std::cout << Q[i*NUM_COLS+j] << " ";
-//    }
-//    std::cout << std::endl;
-//  }
 
   // :TODO
 }
@@ -413,35 +344,12 @@ void utils::getEigenvectors(double *V, const double * const C, const int NC, con
   // C(j,d)=C[j*D+d] # ROW MAJOR
   // V(k,d)=V[k*D+d] # ROW MAJOR
 
-  // TODO:
-
-//  auto norms = computeComponentNorms(C, NC, D);
-
-
-  std::cout << "C filled with all Vs: " << std::endl;
-
-  for (int i = 0; i < std::min(D,10); ++i) {
-    for (int j = 0; j < std::min(D,10); ++j) {
-      std::cout << C[RMJ(i,j,D,D)] << " ";
-    }
-    std::cout << std::endl;
-  }
-
   for (int n = 0; n < NC; ++n) {
     for (int d = 0; d < D; ++d) {
-      V[RMJ(n,d,NC,D)] = C[RMJ(d,D-n-1,D,D)];
+      // read last rows of C (eigenvectors with highest eigenvalue)
+      V[RMJ(n,d,NC,D)] = C[RMJ(D-n-1,d,D,D)];
     }
   }
-
-  std::cout << "V (extracted: " << std::endl;
-
-  for (int i = 0; i < std::min(D,10); ++i) {
-    for (int j = 0; j < std::min(NC,10); ++j) {
-      std::cout << V[RMJ(i,j,NC,D)] << " ";
-    }
-    std::cout << std::endl;
-  }
-
 
   // TODO
 }
@@ -476,13 +384,10 @@ void utils::reconstructDatasetRowMajor(double *data_rec, const double * const V,
 
   // TODO:
 
-  // do data_red * V_r^T
-
   cblas_dgemm(CBLAS_LAYOUT::CblasRowMajor, CBLAS_TRANSPOSE::CblasNoTrans, CBLAS_TRANSPOSE::CblasNoTrans,
               N, D, NC, // m n k
               1.0, data_red, NC, V, D,
               0.0, data_rec, D);
-
 
   // :TODO
 }

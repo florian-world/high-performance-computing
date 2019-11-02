@@ -15,8 +15,8 @@ if __name__ == "__main__":
   # method = "OJA" # YOUR CPP IMPLEMENTATION
 
   # SELECT THE DATASET
-  dataset = "2D"
-  # dataset = "faces"
+  # dataset = "2D"
+  dataset = "faces"
 
   if dataset == "2D":
     DIM = 2
