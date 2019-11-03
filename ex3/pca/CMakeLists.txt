@@ -10,7 +10,7 @@ set(ON_EULER False)
 set( project_sources
    main.cpp
    cacheflusher.cpp
-   code/utils.cpp
+   ../code/utils.cpp
 )
 
 # Create executable with all necessary source files
@@ -42,7 +42,7 @@ endif()
 
 set(project_headers
     cacheflusher.h
-    code/utils.h
+    ../code/utils.h
 )
 
 add_custom_target(headers SOURCES ${project_headers})
