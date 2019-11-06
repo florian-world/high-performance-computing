@@ -3,6 +3,7 @@
 
 #include <iostream>
 
+
 void Perceptron::initializeWeights()
 {
   if (weight_init.compare("allsame") == 0){
@@ -38,8 +39,7 @@ double *Perceptron::forward(const double * const input, const int batch_size) {
     for (int i = 0; i < nInputs; ++i) {
       for (int o = 0; o < nOutputs; ++o) {
         // TODO:
-
-
+         output[o*nOutputs+k] += weights[o*nOutputs+nInputs]*input[k*batch_size+i];
         // :TODO
       }
     }
