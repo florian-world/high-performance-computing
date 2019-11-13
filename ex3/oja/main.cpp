@@ -3,7 +3,7 @@
 
 #include <vector>
 #include "../code/utils.h"
-#include "../code/perceptron.h"
+#include "perceptron.h"
 
 #include <iomanip>
 #include <iostream>
@@ -22,37 +22,37 @@ int main (int argc, char** argv)
   ///////////////////////////////////////////////////////////////////////////
 
 
-  // DATA PARAMETERS
-  int D = 2;  // Data dimension
-  int N = 1024; // Number of training samples
-  int num_comp = 2; // Number of principal components
-  std::string data_name = "2D"; // Data path
-  std::string scaler = "center"; // Scaler type
-  std::string weight_init = "normal"; // "normal" or "allsame"
-  std::string method_name = "OJA"; // Method
-  std::string data_path = "./data/"+data_name+"_dataset.txt"; // Data path
-  // TRAINING PARAMETERS
-  const int nepoch = 20000; // Number of epochs
-  const double learn_rate = 1e-7; // Learning rate
-  const double tolerance = 0.0; // 1e-18;
-  const int batch_size = 1; // Batch-size
-  const int check_every = 10; // Frequency of checking the convergence criterion
+//   DATA PARAMETERS
+//  int D = 2;  // Data dimension
+//  int N = 1024; // Number of training samples
+//  int num_comp = 2; // Number of principal components
+//  std::string data_name = "2D"; // Data path
+//  std::string scaler = "center"; // Scaler type
+//  std::string weight_init = "allsame"; // "normal" or "allsame"
+//  std::string method_name = "OJA"; // Method
+//  std::string data_path = "./data/"+data_name+"_dataset.txt"; // Data path
+//  // TRAINING PARAMETERS
+//  const int nepoch = 200000; // Number of epochs
+//  const double learn_rate = 1e-6; // Learning rate
+//  const double tolerance = 1e-18;// 0.0; // 1e-18;
+//  const int batch_size = 16; // Batch-size
+//  const int check_every = 1000; // Frequency of checking the convergence criterion
 
-  // // DATA PARAMETERS
-  // int D = 1850;  // Data dimension
-  // int N = 1280; // Number of training samples
-  // int num_comp = 5; // Number of principal components
-  // std::string data_name = "faces"; // Data path
-  // std::string scaler = "standard"; // Scaler type
-  // std::string weight_init = "allsame"; // "normal" or "allsame"
-  // std::string method_name = "OJA"; // Method
-  // std::string data_path = "./data/"+data_name+"_dataset.txt"; // Data path
-  // // TRAINING PARAMETERS
-  // const int nepoch = 100;         // Number of epochs
-  // const double learn_rate = 1e-6; // Learning rate
-  // const double tolerance = 0.0; // Convergence criterion (tolerance)
-  // const int batch_size = 32;      // Batch-size
-  // const int check_every = 1; // Frequency of checking the convergence criterion
+   // DATA PARAMETERS
+   int D = 1850;  // Data dimension
+   int N = 1280; // Number of training samples
+   int num_comp = 1; // Number of principal components
+   std::string data_name = "faces"; // Data path
+   std::string scaler = "standard"; // Scaler type
+   std::string weight_init = "normal"; // "normal" or "allsame"
+   std::string method_name = "OJA"; // Method
+   std::string data_path = "./data/"+data_name+"_dataset.txt"; // Data path
+   // TRAINING PARAMETERS
+   const int nepoch = 500;         // Number of epochs
+   const double learn_rate = 1;//1e-6; // Learning rate
+   const double tolerance = 0.0; // Convergence criterion (tolerance)
+   const int batch_size = 32;      // Batch-size
+   const int check_every = 10; // Frequency of checking the convergence criterion
 
 
   double time_start;
@@ -170,13 +170,13 @@ int main (int argc, char** argv)
       // TODO:
 
       // Gradient computed inside the perceptron for Hebb's rule
-      perceptron.hebbsRuleGradient(batch_input, batch_size);
+//      perceptron.hebbsRuleGradient(batch_input, batch_size);
 
       ////////////////////////////////////////////////////////////////
       // 2. Implement Oja's rule
 
       // TODO:
-      // perceptron.ojasRuleGradient(batch_input, batch_size);
+//      perceptron.ojasRuleGradient(batch_input, batch_size);
       // :TODO
 
 
@@ -184,16 +184,16 @@ int main (int argc, char** argv)
       // 3. Implement Sanger's rule
 
       // TODO:
-      // perceptron.sangersRuleGradient(batch_input, batch_size);
+       perceptron.sangersRuleGradient(batch_input, batch_size);
       // :TODO
 
       // Utilities to print the norm of the gradient for debugging
-      // perceptron.printGradientNorm();
+//       perceptron.printGradientNorm();
 
       // Gradient normalization (maybe useful)
-      // perceptron.normalizeGradient();
+       perceptron.normalizeGradient();
 
-      // perceptron.printGradientNorm();
+//       perceptron.printGradientNorm();
 
       // Parameters update
       perceptron.updateParams(learn_rate);
@@ -216,12 +216,17 @@ int main (int argc, char** argv)
       // Plot component norms
       utils::plotComponentNorms(perceptron.weights, num_comp, D);
 
+//      perceptron.printWeights();
+
       // If the weight change smaller than the tolerance, terminate
       if(norm_<tolerance){
         break;
       }
     }
   }
+
+
+//  perceptron.normalizeComponentWeights();
 
   // SAVING THE WEIGHTS
   utils::writeColMajorMatrixToFile("./results/data/"+data_name+method_name+"_components.txt", perceptron.weights, nOutputs, nInputs);
@@ -231,6 +236,7 @@ int main (int argc, char** argv)
 
   // TODO: Compute the learned eigenvalues
   perceptron.computeEigenvalues(data, N);
+  perceptron.printEigenvalues();
   // :TODO
 
   // Write eigenvalues to file

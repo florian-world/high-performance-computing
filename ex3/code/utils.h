@@ -29,12 +29,9 @@ namespace utils{
 
 
   double computeArrayMatrixNorm(const double* const M, const int D);
-
-
   std::vector<double> computeComponentNorms(const double* const M, const int num_comp, const int D);
 
   void plotComponentNorms(const double* const weights, const int num_comp, const int D);
-
 
 
   double computeArrayMatrixDifferenceNorm(const double* const M1, const double* const M2, const int D);
@@ -49,6 +46,8 @@ namespace utils{
   void transposeData(double* data_T, const double* const data, const int N, const int D);
 
   void computeMean(double* mean, const double* const data_T, const int N, const int D);
+
+  void computeVar(double* std, const double* const mean, const double* const data_T, const int N, const int D);
 
   void computeStd(double* std, const double* const mean, const double* const data_T, const int N, const int D);
 

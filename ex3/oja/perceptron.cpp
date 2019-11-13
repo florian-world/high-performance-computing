@@ -1,6 +1,8 @@
 
 #include "perceptron.h"
 
+#include "../code/utils.h"
+
 #include <iostream>
 
 
@@ -39,7 +41,7 @@ double *Perceptron::forward(const double * const input, const int batch_size) {
     for (int i = 0; i < nInputs; ++i) {
       for (int o = 0; o < nOutputs; ++o) {
         // TODO:
-         output[o*nOutputs+k] += weights[o*nOutputs+nInputs]*input[k*batch_size+i];
+         output[o + k * nOutputs] += weights[i*nOutputs+o]*input[k*nInputs+i];
         // :TODO
       }
     }
@@ -70,11 +72,14 @@ void Perceptron::ojasRuleGradient(const double * const input, const int batch_si
   memset(gradient, 0.0, sizeof(double) * nOutputs * nInputs);
   // TODO:
 
-
-
-
-
-
+  for (int k = 0; k < batch_size; ++k) {
+    for (int i = 0; i < nInputs; ++i) {
+      for (int o = 0; o < nOutputs; ++o) {
+        gradient[o + i * nOutputs] +=
+            output[o + k * nOutputs] * (input[i + k * nInputs] - output[o + k * nOutputs]*weights[i*nOutputs+o]);
+      }
+    }
+  }
 
   // :TODO
 
@@ -84,15 +89,27 @@ void Perceptron::ojasRuleGradient(const double * const input, const int batch_si
 }
 
 void Perceptron::sangersRuleGradient(const double * const input, const int batch_size) {
+  // input [batch_size, nInputs]
+  // output [batch_size, nOutputs]
+  // weights [nInputs, nOutputs]
+
   forward(input, batch_size);
   memset(gradient, 0.0, sizeof(double) * nOutputs * nInputs);
   // TODO:
 
+  for (int k = 0; k < batch_size; ++k) {
+    for (int i = 0; i < nInputs; ++i) {
+      double sum_weights = 0.0;
+      for (int o = 0; o < nOutputs; ++o) {
+        sum_weights += weights[i*nOutputs + o] * output[k*nOutputs + o];
 
+        gradient[o + i * nOutputs] +=
+            output[o + k * nOutputs] * (input[i + k * nInputs] - output[o + k * nOutputs]*sum_weights);
 
-
-
-
+        // FORWARD: output[o] += weights[i*nOutputs+o]*input[i]; // sum over i --> w^T * x
+      }
+    }
+  }
 
 
 
@@ -117,6 +134,27 @@ void Perceptron::normalizeGradient() {
   }
 }
 
+void Perceptron::normalizeComponentWeights()
+{
+  auto norms = utils::computeComponentNorms(weights, nOutputs, nInputs);
+  for (int o = 0; o < nOutputs; ++o) {
+    for (int i = 0; i < nInputs; ++i) {
+      weights[i*nOutputs+o] /= norms[o];
+    }
+  }
+
+//  for(int i=0; i<nInputs;++i){
+//    double norm_ = 0.0;
+//    for(int o=0; o<nOutputs;++o){
+//      norm_ += weights[o + i*nOutputs] * weights[o + i*nOutputs];
+//    }
+//    norm_ = sqrt(norm_);
+//    for(int o=0; o<nOutputs;++o){
+//      weights[o + i*nOutputs] /= norm_;
+//    }
+//  }
+}
+
 void Perceptron::printGradientNorm() {
   double norm_ = 0.0;
   for(int i=0; i<nInputs*nOutputs;++i){
@@ -135,9 +173,25 @@ void Perceptron::updateParams(const double learning_rate) {
       weights[o + i*nOutputs] += gradient[o + i*nOutputs] * learning_rate;
     }
   }
+
+
+//  double norm_ = 0.0;
+//  for(int i=0;i<nInputs*nOutputs;++i)
+//  {
+//    norm_+= std::pow(weights[i],2);
+//  }
+//  norm_=std::sqrt(norm_);
+//  for(int i=0;i<nInputs*nOutputs;++i)
+//  {
+//    weights[i]/= norm_;
+//  }
 }
 
 void Perceptron::computeEigenvalues(const double * const input, const int batch_size) {
+//  printWeights();
+  normalizeComponentWeights();
+//  printWeights();
+
   // The eigenvalues are given by the standard deviation at the output
   forward(input, batch_size);
   memset(eigenvalues, 0.0, sizeof(double) * nOutputs);
@@ -145,25 +199,13 @@ void Perceptron::computeEigenvalues(const double * const input, const int batch_
 
   // TODO:
 
+  auto output_t = new double[nOutputs * batch_size];
 
+  utils::transposeData(output_t, output, batch_size, nOutputs);
+  utils::computeMean(mean, output_t, batch_size, nOutputs);
+  utils::computeVar(eigenvalues, mean, output_t, batch_size, nOutputs);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  delete[] output_t;
   // :TODO
 }
 
@@ -184,4 +226,16 @@ void Perceptron::printWeights()
     std::cout << "\n";
   }
   std::cout << "\n";
+}
+
+void Perceptron::printEigenvalues()
+{
+  std::cout << "EIGENVALUES:" << std::endl;
+  for(int o=0; o<nOutputs;++o){
+    std::cout << eigenvalues[o];
+    if(o<nOutputs-1){
+      std::cout << ",";
+    }
+  }
+  std::cout << std::endl;
 }

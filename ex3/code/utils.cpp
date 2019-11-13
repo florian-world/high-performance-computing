@@ -444,3 +444,16 @@ void utils::inverseCenterDatasetRowMajor(double *data_rec, const double * const 
     }
   }
 }
+
+void utils::computeVar(double *std, const double * const mean, const double * const data_T, const int N, const int D)
+{
+  // TODO:
+#pragma omp parallel for
+  for (int d = 0; d < D; ++d) {
+    std[d] = SQUARE(mean[d] - data_T[d*N]);
+    for (int n = 1; n < N; ++n) {
+      // avoid loosing precision due to huge sums -> calculate step wise
+      std[d] = (n*std[d] + SQUARE(mean[d] - data_T[d*N+n])) / (n+1);
+    }
+  }
+}

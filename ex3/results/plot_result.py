@@ -11,12 +11,12 @@ if __name__ == "__main__":
 
   # SELECT YOUR METHOD:
   # method = "PCA_PYTHON" # REFERENCE SOLUTION (COMPARE YOUR CODE WITH THIS)
-  method = "PCA" # YOUR CPP IMPLEMENTATION
-  # method = "OJA" # YOUR CPP IMPLEMENTATION
+  # method = "PCA" # YOUR CPP IMPLEMENTATION
+  method = "OJA" # YOUR CPP IMPLEMENTATION
 
   # SELECT THE DATASET
-  # dataset = "2D"
-  dataset = "faces"
+  dataset = "2D"
+  # dataset = "faces"
 
   if dataset == "2D":
     DIM = 2

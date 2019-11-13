@@ -69,12 +69,12 @@ public:
 
   double *hebbsRuleGradient(const double *const input, const int batch_size);
 
-
   void ojasRuleGradient(const double *const input, const int batch_size);
 
   void sangersRuleGradient(const double *const input, const int batch_size);
 
   void normalizeGradient();
+  void normalizeComponentWeights();
 
   void printGradientNorm();
 
@@ -84,6 +84,8 @@ public:
   void computeEigenvalues(const double *const input, const int batch_size);
 
   void printWeights();
+
+  void printEigenvalues();
 
 };
 
