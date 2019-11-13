@@ -12,9 +12,10 @@
 
 #include <omp.h>
 
+#include <mkl.h>
+
 int main (int argc, char** argv)
 {
-
   ///////////////////////////////////////////////////////////////////////////
   // The implementation of Oja's and Strange's rule are sensitive to
   // initialization of the weights and the gradient might explode due to
@@ -22,37 +23,38 @@ int main (int argc, char** argv)
   ///////////////////////////////////////////////////////////////////////////
 
 
-//   DATA PARAMETERS
-//  int D = 2;  // Data dimension
-//  int N = 1024; // Number of training samples
-//  int num_comp = 2; // Number of principal components
-//  std::string data_name = "2D"; // Data path
-//  std::string scaler = "center"; // Scaler type
+  // DATA PARAMETERS
+  int D = 2;  // Data dimension
+  int N = 1024; // Number of training samples
+  int num_comp = 2; // Number of principal components
+  std::string data_name = "2D"; // Data path
+  std::string scaler = "center"; // Scaler type
+  std::string weight_init = "normal"; // "normal" or "allsame"
+  std::string method_name = "OJA"; // Method
+  std::string data_path = "./data/"+data_name+"_dataset.txt"; // Data path
+  // TRAINING PARAMETERS
+  const int nepoch = 1060000; // Number of epochs
+  const double learn_rate = 1e-7; // Learning rate
+  const double tolerance = 1e-18;//0.0; // 1e-18;
+  const int batch_size = 32; // Batch-size
+  const int check_every = 1000; // Frequency of checking the convergence criterion
+  const int check_every_eig = check_every*100;
+
+//  // DATA PARAMETERS
+//  int D = 1850;  // Data dimension
+//  int N = 1280; // Number of training samples
+//  int num_comp = 5; // Number of principal components
+//  std::string data_name = "faces"; // Data path
+//  std::string scaler = "standard"; // Scaler type
 //  std::string weight_init = "allsame"; // "normal" or "allsame"
 //  std::string method_name = "OJA"; // Method
 //  std::string data_path = "./data/"+data_name+"_dataset.txt"; // Data path
 //  // TRAINING PARAMETERS
-//  const int nepoch = 200000; // Number of epochs
+//  const int nepoch = 100;         // Number of epochs
 //  const double learn_rate = 1e-6; // Learning rate
-//  const double tolerance = 1e-18;// 0.0; // 1e-18;
-//  const int batch_size = 16; // Batch-size
-//  const int check_every = 1000; // Frequency of checking the convergence criterion
-
-   // DATA PARAMETERS
-   int D = 1850;  // Data dimension
-   int N = 1280; // Number of training samples
-   int num_comp = 1; // Number of principal components
-   std::string data_name = "faces"; // Data path
-   std::string scaler = "standard"; // Scaler type
-   std::string weight_init = "normal"; // "normal" or "allsame"
-   std::string method_name = "OJA"; // Method
-   std::string data_path = "./data/"+data_name+"_dataset.txt"; // Data path
-   // TRAINING PARAMETERS
-   const int nepoch = 500;         // Number of epochs
-   const double learn_rate = 1;//1e-6; // Learning rate
-   const double tolerance = 0.0; // Convergence criterion (tolerance)
-   const int batch_size = 32;      // Batch-size
-   const int check_every = 10; // Frequency of checking the convergence criterion
+//  const double tolerance = 0.0; // Convergence criterion (tolerance)
+//  const int batch_size = 32;      // Batch-size
+//  const int check_every = 10; // Frequency of checking the convergence criterion
 
 
   double time_start;
@@ -191,11 +193,13 @@ int main (int argc, char** argv)
 //       perceptron.printGradientNorm();
 
       // Gradient normalization (maybe useful)
-       perceptron.normalizeGradient();
+//       perceptron.normalizeGradient();
 
 //       perceptron.printGradientNorm();
 
       // Parameters update
+//      learn_rate = 1.0/iepoch;
+//      perceptron.updateParams(1.0/iepoch*1e-3);
       perceptron.updateParams(learn_rate);
     }
 
@@ -219,9 +223,32 @@ int main (int argc, char** argv)
 //      perceptron.printWeights();
 
       // If the weight change smaller than the tolerance, terminate
-      if(norm_<tolerance){
+      if(norm_diff<tolerance){
         break;
       }
+    }
+
+    if (iepoch % check_every_eig == 0) {
+
+//      std::cout << "############ EPOCH " << std::to_string(iepoch) << " ############" << std::endl;
+//      perceptron.computeEigenvalues(data, N);
+//      perceptron.printEigenvalues();
+//      perceptron.printWeights();
+//      utils::plotComponentNorms(perceptron.weights, num_comp, D);
+
+//      char choice = '\0';
+//      std::cout << std::endl << "Continue? [y,n] ";
+//      std::cin >> choice;
+
+//      if (choice == 'y') {
+//        std::cout << "Continuing..." << std::endl;
+//      } else if (choice == 'n') {
+//        std::cout << "Aborting..." << std::endl;
+//        break;
+//      } else {
+//        std::cout << "Wrong input, continuing..." << std::endl;
+//      }
+
     }
   }
 
