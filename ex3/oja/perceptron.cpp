@@ -34,10 +34,25 @@ void Perceptron::initializeWeights()
       }
     }
   }
+  else if (weight_init.compare("random") == 0){
+    std::cout << "Initializing all weights with random distribution." << std::endl;
+    std::default_random_engine generator;
+    std::uniform_real_distribution<double> distribution(-1.0,1.0);
+    for(int i=0; i<nInputs;++i){
+      for(int o=0; o<nOutputs;++o){
+        double number = distribution(generator);
+        weights[o + i*nOutputs] = number;
+        weights_prev[o + i*nOutputs] = number;
+      }
+    }
+    normalizeComponentWeights();
+  }
 }
 
 double *Perceptron::forward(const double * const input, const int batch_size) {
   // Input dimension [batch_size, nInputs]
+  // Weight dimension [nInputs, nOutputs]
+  //
   assert(batch_size > 0);
   assert(batch_size <= max_batch_size);
 
@@ -81,6 +96,23 @@ double *Perceptron::hebbsRuleGradient(const double * const input, const int batc
 
 void Perceptron::ojasRuleGradient(const double * const input, const int batch_size) {
   forward(input, batch_size);
+
+//  cblas_dgemm(CBLAS_LAYOUT::CblasRowMajor, CBLAS_TRANSPOSE::CblasTrans, CBLAS_TRANSPOSE::CblasNoTrans,
+//              nOutputs, nOutputs, batch_size, // m n k
+//              1.0, output, nOutputs, output, nOutputs,
+//              0.0, m_workspace, nOutputs);
+
+//  cblas_dgemm(CBLAS_LAYOUT::CblasRowMajor, CBLAS_TRANSPOSE::CblasNoTrans, CBLAS_TRANSPOSE::CblasNoTrans,
+//              nInputs, nOutputs, nOutputs, // m n k
+//              1.0, weights, nInputs, m_workspace, nOutputs,
+//              0.0, gradient, nOutputs);
+
+//  cblas_dgemm(CBLAS_LAYOUT::CblasRowMajor, CBLAS_TRANSPOSE::CblasTrans, CBLAS_TRANSPOSE::CblasNoTrans,
+//              nInputs, nOutputs, batch_size, // m n k
+//              1.0, input, nInputs, output, nOutputs,
+//              -1.0, gradient, nOutputs);
+
+
   memset(gradient, 0.0, sizeof(double) * nOutputs * nInputs);
   // TODO:
 

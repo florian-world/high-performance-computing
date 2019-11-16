@@ -15,8 +15,8 @@ if __name__ == "__main__":
   method = "OJA" # YOUR CPP IMPLEMENTATION
 
   # SELECT THE DATASET
-  dataset = "2D"
-  # dataset = "faces"
+  # dataset = "2D"
+  dataset = "faces"
 
   if dataset == "2D":
     DIM = 2
@@ -35,7 +35,6 @@ if __name__ == "__main__":
   if dataset == "faces":
     # For the faces dataset the scaling is not important
     data_centered = data_centered/data_std_true
-
 
   eig_true = np.loadtxt("./data/{:}_eigs_true.txt".format(dataset))
   print("TRUE EIGENVALUES:")
@@ -158,12 +157,6 @@ if __name__ == "__main__":
     fig.suptitle('METHOD {:}'.format(method))
     plt.savefig("figures/{:}_{:}_reconstruction.pdf".format(dataset, method))
     plt.close()
-
-
-
-
-
-
 
 
 

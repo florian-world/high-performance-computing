@@ -26,6 +26,7 @@ public:
 
 private:
   double *const gradient_local;
+  double *m_workspace;
 
 public:
   Perceptron(int nInputs_, int nOutputs_, int max_batch_size_, std::string weight_init_)
@@ -35,7 +36,8 @@ public:
         output(new double[nOutputs_ * max_batch_size_]()),
         gradient(new double[nOutputs_ * nInputs_]()),
         eigenvalues(new double[nOutputs_]()), mean(new double[nOutputs_]()), 
-        gradient_local(new double[nOutputs_ * nInputs_]())
+        gradient_local(new double[nOutputs_ * nInputs_]()),
+        m_workspace(new double[nOutputs_ * nOutputs_]())
         {
     assert(nullptr != weights);
     assert(nullptr != weights_prev);
@@ -44,6 +46,7 @@ public:
     assert(nullptr != eigenvalues);
     assert(nullptr != mean);
     assert(nullptr != gradient_local);
+    assert(nullptr != m_workspace);
     initializeWeights();
   }
 
@@ -55,6 +58,7 @@ public:
     delete[] eigenvalues;
     delete[] mean;
     delete[] gradient_local;
+    delete[] m_workspace;
   }
 
   Perceptron() = delete;
