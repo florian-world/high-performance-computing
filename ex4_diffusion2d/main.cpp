@@ -6,6 +6,7 @@
 
 using namespace hpcse;
 
+//#define _PERF_
 
 int main(int argc, char *argv[]) {
   if (argc < 5) {
@@ -33,7 +34,6 @@ int main(int argc, char *argv[]) {
   const double dt = std::stod(argv[4]);
 
   Diffusion2d system(D, L, N, dt, rank, procs);
-
   system.compute_diagnostics(0);
 
   Timer t;

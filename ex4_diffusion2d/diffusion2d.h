@@ -10,7 +10,6 @@ struct Diagnostics
 {
   double time;
   double heat;
-
   Diagnostics(double time, double heat) : time(time), heat(heat) {}
 };
 
@@ -18,6 +17,11 @@ class Diffusion2d
 {
 public:
   Diffusion2d(const double D, const double L, const int N, const double dt, const int rank, const int procs);
+
+  enum CommTags {
+    Upper = 5712,
+    Lower,
+  };
 
   void advance();
   void compute_diagnostics(const double t);

@@ -1,5 +1,7 @@
 #include "diffusion2d.h"
 
+#include <openmpi/mpi.h>
+
 extern "C" {
 #include <stdio.h>
 }
@@ -10,7 +12,13 @@ extern "C" {
 
 using namespace hpcse;
 
-Diffusion2d::Diffusion2d(const double D, const double L, const int N, const double dt, const int rank, const int procs) : m_D(D), m_L(L), m_N(N), m_dt(dt), m_rank(rank), m_procs(procs)
+Diffusion2d::Diffusion2d(const double D, const double L, const int N, const double dt, const int rank, const int procs)
+  : m_D(D),
+    m_L(L),
+    m_N(N),
+    m_dt(dt),
+    m_rank(rank),
+    m_procs(procs)
 {
   /* Real space grid spacing */
   m_dr = m_L / (m_N - 1);
@@ -29,7 +37,7 @@ Diffusion2d::Diffusion2d(const double D, const double L, const int N, const doub
   m_realN = m_N + 2;
 
   /* Total number of cells */
-  m_Ntot = (m_localN + 2) * (m_N + 2);
+  m_Ntot = (m_localN + 2) * m_realN;
 
   m_rho.resize(m_Ntot, 0.0);
   m_rho_tmp.resize(m_Ntot, 0.0);
@@ -48,19 +56,39 @@ void Diffusion2d::advance()
   // cells on a periodic domain required to compute the central finite
   // differences below.
 
-  // *** start MPI part ***
-  // ...
-  // *** end MPI part ***
+
+  if (m_procs > 1) {
+    // *** start MPI part ***
+    auto nextRank = (m_procs + m_rank + 1)%m_procs;
+    auto prevRank = (m_procs + m_rank - 1)%m_procs;
+    if (m_rank % 2 == 0) {
+//      std::cout << "ME (rank = " << m_rank << ") sending to " << (m_procs + m_rank - 1)%m_procs << std::endl;
+      MPI_Ssend(m_rho.data() + (1)*m_realN, m_realN, MPI_DOUBLE, prevRank, CommTags::Lower, MPI_COMM_WORLD);
+      MPI_Ssend(m_rho.data() + (m_localN)*m_realN, m_realN, MPI_DOUBLE, nextRank, CommTags::Upper, MPI_COMM_WORLD);
+
+      MPI_Recv(m_rho.data() + (m_localN+1)*m_realN, m_realN, MPI_DOUBLE, nextRank, CommTags::Lower, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv(m_rho.data() + (0)*m_realN, m_realN, MPI_DOUBLE, prevRank, CommTags::Upper, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    } else {
+//      std::cout << "ME (rank = " << m_rank << ") receiving from to " << (m_procs + m_rank + 1)%m_procs << std::endl;
+      MPI_Recv(m_rho.data() + (m_localN+1)*m_realN, m_realN, MPI_DOUBLE, nextRank, CommTags::Lower, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv(m_rho.data() + (0)*m_realN, m_realN, MPI_DOUBLE, prevRank, CommTags::Upper, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+      MPI_Ssend(m_rho.data() + (1)*m_realN, m_realN, MPI_DOUBLE, prevRank, CommTags::Lower, MPI_COMM_WORLD);
+      MPI_Ssend(m_rho.data() + (m_localN)*m_realN, m_realN, MPI_DOUBLE, nextRank, CommTags::Upper, MPI_COMM_WORLD);
+    }
+    // *** end MPI part ***
+  }
 
 
   /* Central differences in space, forward Euler in time, Dirichlet BCs */
   for (int i = 1; i <= m_localN; ++i) {
     for (int j = 1; j <= m_N; ++j) {
-      m_rho_tmp[i*m_realN + j] = m_rho[i*m_realN + j] + m_fac * ( + m_rho[i*m_realN + (j+1)]
-          + m_rho[i*m_realN + (j-1)]
-          + m_rho[(i+1)*m_realN + j]
-          + m_rho[(i-1)*m_realN + j]
-          - 4.*m_rho[i*m_realN + j]
+      m_rho_tmp[i*m_realN + j] = m_rho[i*m_realN + j] + m_fac * (
+            + m_rho[i*m_realN + (j+1)]
+            + m_rho[i*m_realN + (j-1)]
+            + m_rho[(i+1)*m_realN + j]
+            + m_rho[(i-1)*m_realN + j]
+            - 4.*m_rho[i*m_realN + j]
           );
     }
   }
@@ -85,6 +113,7 @@ void Diffusion2d::compute_diagnostics(const double t)
 
   // *** start MPI part ***
   // ...
+  MPI_Reduce(m_rank ? &heat : MPI_IN_PLACE, &heat, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
   // *** end MPI part ***
 
   if (m_rank == 0) {
@@ -125,6 +154,8 @@ void Diffusion2d::compute_histogram_hybrid()
 
   // *** start MPI part ***
   // ...
+  MPI_Allreduce(&lmin_rho, &min_rho, 1, MPI_DOUBLE, MPI_MIN, MPI_COMM_WORLD);
+  MPI_Allreduce(&lmax_rho, &max_rho, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
   // *** end MPI part ***
 
   double epsilon = 1e-8;
@@ -143,7 +174,7 @@ void Diffusion2d::compute_histogram_hybrid()
   // the result in the array g_hist.  Only rank 0 must print the result.
 
   // *** start MPI part ***
-  // ...
+  MPI_Reduce(&hist, &g_hist, M, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
   // *** end MPI part ***
 
   if (m_rank == 0)
