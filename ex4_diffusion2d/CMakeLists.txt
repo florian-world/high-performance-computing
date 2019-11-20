@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 project(diffusion2d)
 
 set( project_sources
+   diffusion2d.cpp
    main.cpp
 )
 
@@ -24,7 +25,8 @@ target_link_libraries(${PROJECT_NAME} PUBLIC MPI::MPI_CXX OpenMP::OpenMP_CXX)
 
 
 set( project_headers
-    
+    diffusion2d.h
+    timer.h
 )
 
 add_custom_target(headers SOURCES ${project_headers})
