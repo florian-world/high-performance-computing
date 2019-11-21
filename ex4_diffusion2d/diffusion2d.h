@@ -26,7 +26,7 @@ public:
   void advance();
   void compute_diagnostics(const double t);
   void write_diagnostics(const std::string &filename) const;
-  void compute_histogram_hybrid(); //end public
+  void compute_histogram_hybrid(const std::string &filename = ""); //end public
 
 private:
   void initialize_density();

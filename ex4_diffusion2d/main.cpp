@@ -36,6 +36,9 @@ int main(int argc, char *argv[]) {
   Diffusion2d system(D, L, N, dt, rank, procs);
   system.compute_diagnostics(0);
 
+
+  system.compute_histogram_hybrid("hist_0.dat");
+
   Timer t;
   t.start();
   for (int step = 0; step < 10000; ++step) {
@@ -49,7 +52,7 @@ int main(int argc, char *argv[]) {
   if (rank == 0)
       std::cout << "Timing: " << N << ' ' << t.get_timing() << '\n';
 
-  system.compute_histogram_hybrid();
+  system.compute_histogram_hybrid("hist_1.dat");
 
 #ifndef _PERF_
   if (rank == 0)

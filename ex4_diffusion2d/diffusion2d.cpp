@@ -56,32 +56,25 @@ void Diffusion2d::advance()
   // cells on a periodic domain required to compute the central finite
   // differences below.
 
+  MPI_Request req[4];
 
   if (m_procs > 1) {
     // *** start MPI part ***
     auto nextRank = (m_procs + m_rank + 1)%m_procs;
     auto prevRank = (m_procs + m_rank - 1)%m_procs;
-    if (m_rank % 2 == 0) {
-//      std::cout << "ME (rank = " << m_rank << ") sending to " << (m_procs + m_rank - 1)%m_procs << std::endl;
-      MPI_Ssend(m_rho.data() + (1)*m_realN, m_realN, MPI_DOUBLE, prevRank, CommTags::Lower, MPI_COMM_WORLD);
-      MPI_Ssend(m_rho.data() + (m_localN)*m_realN, m_realN, MPI_DOUBLE, nextRank, CommTags::Upper, MPI_COMM_WORLD);
 
-      MPI_Recv(m_rho.data() + (m_localN+1)*m_realN, m_realN, MPI_DOUBLE, nextRank, CommTags::Lower, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      MPI_Recv(m_rho.data() + (0)*m_realN, m_realN, MPI_DOUBLE, prevRank, CommTags::Upper, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    } else {
-//      std::cout << "ME (rank = " << m_rank << ") receiving from to " << (m_procs + m_rank + 1)%m_procs << std::endl;
-      MPI_Recv(m_rho.data() + (m_localN+1)*m_realN, m_realN, MPI_DOUBLE, nextRank, CommTags::Lower, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      MPI_Recv(m_rho.data() + (0)*m_realN, m_realN, MPI_DOUBLE, prevRank, CommTags::Upper, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    auto pSendLower = m_rho.data() + (1)*m_realN;
+    auto pSendUpper = m_rho.data() + (m_localN)*m_realN;
+    auto pSaveLower = m_rho.data() + (0)*m_realN;
+    auto pSaveUpper = m_rho.data() + (m_localN+1)*m_realN;
 
-      MPI_Ssend(m_rho.data() + (1)*m_realN, m_realN, MPI_DOUBLE, prevRank, CommTags::Lower, MPI_COMM_WORLD);
-      MPI_Ssend(m_rho.data() + (m_localN)*m_realN, m_realN, MPI_DOUBLE, nextRank, CommTags::Upper, MPI_COMM_WORLD);
-    }
-    // *** end MPI part ***
+    MPI_Irecv(pSaveUpper, m_realN, MPI_DOUBLE, nextRank, CommTags::Lower, MPI_COMM_WORLD, req);
+    MPI_Irecv(pSaveLower, m_realN, MPI_DOUBLE, prevRank, CommTags::Upper, MPI_COMM_WORLD, req+1);
+    MPI_Isend(pSendLower, m_realN, MPI_DOUBLE, prevRank, CommTags::Lower, MPI_COMM_WORLD, req+2);
+    MPI_Isend(pSendUpper, m_realN, MPI_DOUBLE, nextRank, CommTags::Upper, MPI_COMM_WORLD, req+3);
   }
 
-
-  /* Central differences in space, forward Euler in time, Dirichlet BCs */
-  for (int i = 1; i <= m_localN; ++i) {
+  auto applyStencil = [&](int i) {
     for (int j = 1; j <= m_N; ++j) {
       m_rho_tmp[i*m_realN + j] = m_rho[i*m_realN + j] + m_fac * (
             + m_rho[i*m_realN + (j+1)]
@@ -91,7 +84,18 @@ void Diffusion2d::advance()
             - 4.*m_rho[i*m_realN + j]
           );
     }
+  };
+
+  /* Central differences in space, forward Euler in time, Dirichlet BCs */
+  for (int i = 2; i < m_localN; ++i) {
+    applyStencil(i);
   }
+
+  if (m_procs > 1)
+    MPI_Waitall(4,req,MPI_STATUSES_IGNORE);
+
+  applyStencil(1);
+  applyStencil(m_localN);
 
   /* Use swap instead of rho_ = rho_tmp__. This is much more efficient,
              because it does not copy element by element, just replaces storage
@@ -130,7 +134,7 @@ void Diffusion2d::write_diagnostics(const std::string &filename) const
   out_file.close();
 }
 
-void Diffusion2d::compute_histogram_hybrid()
+void Diffusion2d::compute_histogram_hybrid(const std::string &filename)
 {
   /* Number of histogram bins */
   int M = 10;
@@ -161,9 +165,14 @@ void Diffusion2d::compute_histogram_hybrid()
   double epsilon = 1e-8;
   double dh = (max_rho - min_rho + epsilon) / M;
 
+//  std::cout << "BIN MIN: " << min_rho << " BIN MAX: " << max_rho << std::endl;
+
   for(int i = 1; i <= m_localN; ++i)
     for(int j = 1; j <= m_N; ++j) {
       unsigned int bin = (m_rho[i*m_realN + j] - min_rho) / dh;
+      if (bin > 1) {
+//        std::cout << "Found some high value here:" << m_rho[i*m_realN + j] << std::endl;
+      }
       hist[bin]++;
     }
 
@@ -182,11 +191,25 @@ void Diffusion2d::compute_histogram_hybrid()
     printf("=====================================\n");
     printf("Output of compute_histogram_hybrid():\n");
     int gl = 0;
+
+//    printf("MIN %.1f MAX %.1f WIDTH %.1f M %d\n", min_rho, max_rho, dh, M);
     for (int i = 0; i < M; i++) {
-      printf("bin[%d] = %d\n", i, g_hist[i]);
+      double bmin = min_rho + dh * (i);
+      double bmax = min_rho + dh * (i+1);
+      printf("bin[%.1f to %.1f] = %d\n", bmin, bmax, g_hist[i]);
       gl += g_hist[i];
     }
     printf("Total elements = %d\n", gl);
+
+    if (!filename.empty()) {
+      std::ofstream out_file(filename, std::ios::out);
+      for (int i = 0; i < M; i++) {
+        double x = min_rho + dh * (i + 0.5);
+//        double x = min_rho + (max_rho - min_rho) * (i + 0.5) / dh;
+        out_file << x << " " << g_hist[i] << std::endl;
+      }
+      out_file.close();
+    }
   }
 
 }
