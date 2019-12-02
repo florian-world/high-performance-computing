@@ -40,6 +40,8 @@ void reset_velocities(ArrayOfParticles & particles)
 void compute_interaction(const ArrayOfParticles & sources,
                          ArrayOfParticles & targets)
 {
+  assert(sources.size() == targets.size());
+
 #pragma omp parallel for
   for (size_t i = 0; i < sources.size(); ++i) {
     targets.vel_x(i) = 0.0;
@@ -48,7 +50,7 @@ void compute_interaction(const ArrayOfParticles & sources,
       if (i == j)
           continue; // exclude self interaction
 
-      auto denominator = (SQUARE(sources.pos_x(i) - sources.pos_x(j)) - SQUARE(sources.pos_y(i) - sources.pos_y(j)));
+      auto denominator = (SQUARE(sources.pos_x(i) - sources.pos_x(j)) + SQUARE(sources.pos_y(i) - sources.pos_y(j)));
 
       targets.vel_x(i) += sources.gamma(j) * M_PI * (- (sources.pos_y(i) - sources.pos_y(j))) / denominator;
       targets.vel_y(i) += sources.gamma(j) * M_PI * (sources.pos_x(i) - sources.pos_x(j)) / denominator;
