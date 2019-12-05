@@ -38,12 +38,13 @@ void reset_velocities(ArrayOfParticles & particles)
 }
 
 void compute_interaction(const ArrayOfParticles & sources,
-                         ArrayOfParticles & targets, bool excludeSelfInteraction = true)
+                         ArrayOfParticles & targets)
 {
+#pragma omp parallel for
   for (size_t j = 0; j < sources.size(); ++j) {
     for (size_t i = 0; i < targets.size(); ++i) {
 
-      if (excludeSelfInteraction && i == j)
+      if (i == j)
           continue; // exclude self interaction
 
       auto denominator = (SQUARE(targets.pos_x(j) - sources.pos_x(i)) + SQUARE(targets.pos_y(j) - sources.pos_y(i)));
@@ -67,6 +68,7 @@ value_t sum_circulation(const ArrayOfParticles& particles)
 {
   value_t total = 0;
 
+#pragma omp parallel reduction (+: total)
   for (size_t i=0; i<particles.size(); ++i)
   {
     total += particles.gamma(i);

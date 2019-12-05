@@ -9,13 +9,13 @@ project(particles)
 set( project_sources
 	 ArrayOfParticles.h
    Profiler.h
-   SerialParticlesIterator.h
 # 	 main.cpp put in executable to destinguish with mpi version
 )
 
 # Create executable with all necessary source files
 add_executable(${PROJECT_NAME}
 	main.cpp
+  SerialParticlesIterator_parallel.h
   ${project_sources}
 )
 
@@ -28,6 +28,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC OpenMP::OpenMP_CXX)
 
 add_executable(
  ${PROJECT_NAME}_mpi
+ SerialParticlesIterator.h
  main_mpi.cpp
  ${project_sources}
 )

@@ -5,6 +5,8 @@
 #include <string>
 #include <unordered_map>
 
+#include <sstream>
+
 class Profiler
 {
   struct Timer
@@ -58,7 +60,8 @@ public:
     timings[name].stop();
   }
 
-  void printStatAndReset()
+
+  void printStatAndReset(bool doReset = true)
   {
     size_t tot_nanoseconds = 0;
     for (auto &tm : timings)
@@ -77,8 +80,28 @@ public:
       const double mSecPerCall = microSecs / tm.second.n_calls;
       printf("[%-10s]: %.07e | %12lu | %.07e\n", tm.first.c_str(), microSecs,
                                              tm.second.n_calls, mSecPerCall);
+      if (doReset)
+        tm.second.reset();
+    }
+  }
+
+  void writeCsvHeaders(std::stringstream& ss) {
+    for (auto &tm : timings) {
+      ss << tm.first << ";";
+    }
+    ss << std::endl;
+  }
+  void writeCsvLine(std::stringstream& ss) {
+    for (auto &tm : timings) {
+
+      const double nano2micro_factor = 1.0e-6;
+      const double microSecs = tm.second.total * nano2micro_factor;
+
+      ss << microSecs << ";";
+
       tm.second.reset();
     }
+    ss << std::endl;
   }
 };
 

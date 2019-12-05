@@ -1,19 +1,41 @@
 #include <fstream>
 #include <iostream>
+#include <sstream>
 
 #include "Profiler.h"
 
-#include "SerialParticlesIterator.h"
+#include "SerialParticlesIterator_parallel.h"
+
+#include <omp.h>
 
 
 using namespace SerialParticlesIterator;
 
+int exec_main (int argc, char ** argv, int num_threads);
 
-int main (int argc, char ** argv)
+
+int main(int argc, char ** argv) {
+  exec_main(argc,argv,1);
+  int steps = 4;
+  for (int i = steps; i <= 24; i+= steps) {
+    exec_main(argc,argv,i);
+  }
+//  exec_main(argc,argv,8);
+}
+
+int exec_main (int argc, char ** argv, int num_threads)
 {
+  omp_set_num_threads(num_threads);
+  std::stringstream csvPerfSS;
+
   Profiler profiler;
   int mpi_rank=0, mpi_size=1;
-  size_t global_n_particles = 5040;
+
+#ifdef WEAK_SCALING
+  size_t global_n_particles = 3600 * num_threads;
+#else
+  size_t global_n_particles = 36;
+#endif
 
   if (argc > 1) global_n_particles = std::stoul(argv[1]);
   if (mpi_rank==0)
@@ -82,9 +104,15 @@ int main (int argc, char ** argv)
 
       if (mpi_rank == 0)
       {
-        if(time > 0) profiler.printStatAndReset();
+        if(time > 0) profiler.printStatAndReset(false);
         printf("Iteration %lu - time %f - Total Circulation %f\n",
                step, time, total_circulation);
+
+        if (time > 0) {
+          profiler.writeCsvLine(csvPerfSS);
+        } else {
+          profiler.writeCsvHeaders(csvPerfSS);
+        }
       }
     }
 
@@ -92,6 +120,19 @@ int main (int argc, char ** argv)
     time += dt;
     step ++;
   }
+
+
+
+
+#ifdef WEAK_SCALING
+  char fname[128]; sprintf(fname, "perf_weak_nthreads_%02d.csv", num_threads);
+#else
+  char fname[128]; sprintf(fname, "perf_strong_nthreads_%02d.csv", num_threads);
+#endif
+  std::ofstream outFile;
+  outFile.open(fname);
+  outFile << csvPerfSS.rdbuf();
+  outFile.close();
 
   return 0;
 }
