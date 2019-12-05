@@ -52,8 +52,8 @@ void compute_interaction(const ArrayOfParticles & sources,
 
       auto denominator = (SQUARE(sources.pos_x(i) - sources.pos_x(j)) + SQUARE(sources.pos_y(i) - sources.pos_y(j)));
 
-      targets.vel_x(i) += sources.gamma(j) * M_PI * (- (sources.pos_y(i) - sources.pos_y(j))) / denominator;
-      targets.vel_y(i) += sources.gamma(j) * M_PI * (sources.pos_x(i) - sources.pos_x(j)) / denominator;
+      targets.vel_x(i) += sources.gamma(j) / (2 * M_PI) * (- (sources.pos_y(i) - sources.pos_y(j))) / denominator;
+      targets.vel_y(i) += sources.gamma(j) / (2 * M_PI) * (sources.pos_x(i) - sources.pos_x(j)) / denominator;
     }
   }
 }
