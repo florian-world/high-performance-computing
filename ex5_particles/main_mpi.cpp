@@ -1,5 +1,5 @@
 #include <fstream>
-#include <openmpi/mpi.h>
+#include <mpi.h>
 
 #include "Profiler.h"
 
