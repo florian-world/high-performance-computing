@@ -67,6 +67,10 @@ int main (int argc, char ** argv)
 
     profiler.start("compute");
 
+    if (mpi_size == 1) {
+      compute_interaction(particles, particles, true);
+    }
+
     for (int i = 1; i < mpi_size; ++i) {
       auto rankTo = (mpi_rank + i) % mpi_size;
       auto rankFrom = (mpi_rank + mpi_size - i) % mpi_size;
