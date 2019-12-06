@@ -50,7 +50,9 @@ int main (int argc, char ** argv)
     };
     ArrayOfParticles particles = initialize_particles_1D(
         n_particles, start_x, end_x, gamma_init_1D);
-    ArrayOfParticles particles_mpi = initialize_particles_1D(
+    ArrayOfParticles particles_mpi1 = initialize_particles_1D(
+        n_particles, start_x, end_x, gamma_init_1D);
+    ArrayOfParticles particles_mpi2 = initialize_particles_1D(
         n_particles, start_x, end_x, gamma_init_1D);
 
     value_t time = 0;
@@ -62,29 +64,39 @@ int main (int argc, char ** argv)
         reset_velocities(particles);
         profiler.stop("clear");
 
-        // 1. compute local
         profiler.start("compute");
-        compute_interaction(particles, particles);
-        profiler.stop("compute");
-
 
         for (int i = 1; i < mpi_size; ++i) {
           auto rankTo = (mpi_rank + i) % mpi_size;
           auto rankFrom = (mpi_rank + mpi_size - i) % mpi_size;
-//          auto toSendX = i > 0 ? particles_mpi.pos_x() : particles.pos_x();
-//          auto toSendY = i > 0 ? particles_mpi.pos_y() : particles.pos_y();
-//          auto toSendGamma = i > 0 ? particles_mpi.gamma() : particles.gamma();
 
           assert(n_particles == particles.size());
 
-          MPI_Sendrecv(particles.pos_x(), n_particles, MPI_VALUE_T, rankTo, Tags::X,
-                       particles_mpi.pos_x(), n_particles, MPI_VALUE_T, rankFrom, Tags::X, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-          MPI_Sendrecv(particles.pos_y(), n_particles, MPI_VALUE_T, rankTo, Tags::Y,
-                       particles_mpi.pos_y(), n_particles, MPI_VALUE_T, rankFrom, Tags::Y, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-          MPI_Sendrecv(particles.gamma(), n_particles, MPI_VALUE_T, rankTo, Tags::Gamma,
-                       particles_mpi.gamma(), n_particles, MPI_VALUE_T, rankFrom, Tags::Gamma, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-          compute_interaction(particles_mpi, particles, false);
+          MPI_Request mpiReqs[6];
+
+          auto &particles_mpi = (i%2==0) ? particles_mpi1 : particles_mpi2;
+          auto &particles_calc = i == 1 ? particles : ((i%2==0) ? particles_mpi2 : particles_mpi1);
+
+          MPI_Isend(particles.pos_x(), n_particles, MPI_VALUE_T, rankTo, Tags::X, MPI_COMM_WORLD, &mpiReqs[0]);
+          MPI_Irecv(particles_mpi.pos_x(), n_particles, MPI_VALUE_T, rankFrom, Tags::X, MPI_COMM_WORLD, &mpiReqs[3]);
+
+          MPI_Isend(particles.pos_y(), n_particles, MPI_VALUE_T, rankTo, Tags::Y, MPI_COMM_WORLD, &mpiReqs[1]);
+          MPI_Irecv(particles_mpi.pos_y(), n_particles, MPI_VALUE_T, rankFrom, Tags::Y, MPI_COMM_WORLD, &mpiReqs[4]);
+
+          MPI_Isend(particles.gamma(), n_particles, MPI_VALUE_T, rankTo, Tags::Gamma, MPI_COMM_WORLD, &mpiReqs[2]);
+          MPI_Irecv(particles_mpi.gamma(), n_particles, MPI_VALUE_T, rankFrom, Tags::Gamma, MPI_COMM_WORLD, &mpiReqs[5]);
+
+          compute_interaction(particles_calc, particles, i == 1);
+
+          // synchronize to be able to use the buffers again...
+          MPI_Waitall(6, mpiReqs, MPI_STATUSES_IGNORE);
+
+          if (i == mpi_size-1) {
+            // compute last one directly here
+            compute_interaction(particles_mpi, particles, i == 1);
+          }
         }
+        profiler.stop("compute");
 
         // 2. with new velocities, advect particles positions:
         profiler.start("advect");
