@@ -1,6 +1,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <cmath>
 
 #include "Profiler.h"
 
@@ -31,8 +32,9 @@ int exec_main (int argc, char ** argv, int num_threads)
   Profiler profiler;
   int mpi_rank=0, mpi_size=1;
 
+#define WEAK_SCALING
 #ifdef WEAK_SCALING
-  size_t global_n_particles = 3600 * num_threads;
+  size_t global_n_particles = 3600 * static_cast<size_t>(round(sqrt(num_threads)));
 #else
   size_t global_n_particles = 36;
 #endif
