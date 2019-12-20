@@ -22,7 +22,7 @@ class Diffusion2D
       Y = 1
     };
 public:
-  Diffusion2D(const double D, const double L, const int N, const double dt)
+  Diffusion2D(const double D, const double L, const size_t N, const double dt)
     : m_L(L), m_N(N)
   {
     // Real space grid spacing.
@@ -41,62 +41,52 @@ public:
     initialize_phi();
 
     // Common pre-factor
-    m_R = D * dt / (2. * m_dr * m_dr);
+    m_C = D * dt / (2. * m_dr * m_dr);
 
     // TODO:
     // Initialize diagonals of the coefficient
     // matrix A, where Ax=b is the corresponding
     // system to be solved
-    m_a.resize(m_realN-2, -m_R);
-    m_b.resize(m_realN-2, 1. + 2.*m_R);
-    m_c.resize(m_realN-2, -m_R);
+    m_a.resize(m_N, -m_C);
+    m_b.resize(m_N, 1. + 2.*m_C);
+    m_c.resize(m_N, -m_C);
   }
+
+  void midpointDerivative (Direction dir) {
+      // picks the right difference in indicies
+      auto idxDiff = sub2ind(dir, 0, 1);
+  #pragma omp parallel for
+      for (size_t iy=1; iy<m_realN-1; iy++) {
+        for (size_t ix=1; ix<m_realN-1; ix++) {
+          // always sum up in the same way
+          auto k = sub2ind(Direction::Y, ix, iy);
+          auto k1 = k - idxDiff;
+          auto k2 = k + idxDiff;
+
+          m_rhs[k] = m_phi[k] + m_C * (m_phi[k1] - 2.0*m_phi[k] + m_phi[k2]);
+        }
+      }
+    }
 
   void advance()
   {
     // TODO:
     // Implement the ADI scheme for diffusion
     // and parallelize with OpenMP
-#pragma omp parallel for
-    for (size_t iy=1; iy<m_realN-1; iy++) //rows
-      for (size_t ix=1; ix<m_realN-1; ix++) //columns
-      {
-        size_t k  =  iy    * m_realN + ix;
-        size_t k1 = (iy-1) * m_realN + ix;
-        size_t k2 = (iy+1) * m_realN + ix;
-        m_rhs[k] = m_phi[k] + m_R * (m_phi[k1] - 2.*m_phi[k] + m_phi[k2]);
-      }
-#pragma omp parallel for
-    for (int iy=1; iy<m_realN-1; iy++) //rows
-      thomas(Direction::X, iy);
 
     // ADI Step 1: Update rows at half timestep
     // Solve implicit system with Thomas algorithm
+    midpointDerivative(Direction::Y);
 #pragma omp parallel for
     for (size_t iy=1; iy<m_realN-1; iy++) //rows
-      for (size_t ix=1; ix<m_realN-1; ix++) //columns
-      {
-        size_t k  = iy * m_realN + ix;
-        size_t k1 = iy * m_realN + (ix-1);
-        size_t k2 = iy * m_realN + (ix+1);
-        m_rhs[k] = m_phi[k] + m_R * (m_phi[k1] - 2.*m_phi[k] + m_phi[k2]);
-      }
+      thomasSolver(Direction::X, iy);
 
     // ADI: Step 2: Update columns at full timestep
     // Solve implicit system with Thomas algorithm
-
-#pragma omp parallel for
-    for (size_t iy=1; iy<m_realN-1; iy++) //rows
-      for (size_t ix=1; ix<m_realN-1; ix++) //columns
-      {
-        size_t k  = iy * m_realN + ix;
-        size_t k1 = iy * m_realN + (ix-1);
-        size_t k2 = iy * m_realN + (ix+1);
-        m_rhs[k] = m_phi[k] + m_R * (m_phi[k1] - 2.*m_phi[k] + m_phi[k2]);
-      }
+    midpointDerivative(Direction::X);
 #pragma omp parallel for
     for (size_t ix=1; ix<m_realN-1; ix++) //columns
-      thomas(Direction::Y, ix);
+      thomasSolver(Direction::Y, ix);
   }
 
   void compute_diagnostics(const double t)
@@ -106,8 +96,8 @@ public:
     // TODO:
     // Compute the integral of phi_ in the computational domain
 #pragma omp parallel for reduction(+:heat)
-    for (int i = 1; i < m_realN-1; ++i)
-      for (int j = 1; j < m_realN-1; ++j)
+    for (size_t i = 1; i < m_realN-1; ++i)
+      for (size_t j = 1; j < m_realN-1; ++j)
         heat += m_dr * m_dr * m_phi[i * m_realN + j];
 
 #ifndef NDEBUG
@@ -127,29 +117,32 @@ public:
 private:
   void initialize_phi()
   {
-    // Initialize phi(x, y, t=0)
-    double bound = 0.25 * m_L;
-
     // TODO:
     // Initialize field phi based on the
     // prescribed initial conditions
     // and parallelize with OpenMP
+
+    // Initialize phi(x, y, t=0)
+    double bound = 0.25 * m_L;
+
+    auto start = - m_L/2.0; // (-s, -s)
+
 #pragma omp parallel for
     for (size_t i = 1; i < m_realN - 1; ++i)     // rows
       for (size_t j = 1; j < m_realN - 1; ++j) // columns
       {
-        size_t k = i*m_realN + j;
-        if (std::abs((i-1)*m_dr - m_L/2.) < bound && std::abs((j-1)*m_dr - m_L/2.) < bound)
-          m_phi[k] = 1.;
+        auto k = sub2ind(Direction::X, i, j);
+        if (std::abs(start + (i-1)*m_dr) < bound && std::abs(start + (j-1)*m_dr) < bound)
+          m_phi[k] = 1.0;
         else
-          m_phi[k] = 0.;
+          m_phi[k] = 0.0;
       }
   }
 
   double m_L;
   size_t m_N, m_Ntot, m_realN;
   double m_dr;
-  double m_R;
+  double m_C;
   std::vector<double> m_phi, m_rhs;
   std::vector<Diagnostics> m_diag;
   std::vector<double> m_a, m_b, m_c;
@@ -165,34 +158,32 @@ private:
   }
 
 
-  void thomas(const Direction dir, const size_t nid)
+  void thomasSolver(const Direction dir, const size_t nid)
   {
-    std::vector<double> d_(m_N);  // right hand side
-    std::vector<double> cp_(m_N); // c prime
-    std::vector<double> dp_(m_N); // d prime
+    std::vector<double> rhs(m_N);
+    std::vector<double> rhsp(m_N);
+    std::vector<double> cp(m_N);
 
-    // compute modified coefficients
-    d_[0] = dir==0 ? m_rhs[nid*m_realN] : m_rhs[nid];
-    cp_[0] = m_c[0]/m_b[0];
-    dp_[0] = d_[0]/m_b[0];
-    for (size_t i=1; i<m_N-1; i++)
-    {
+    rhs[0] = m_rhs[sub2ind(dir, nid, 0)];
+
+    cp[0] = m_c[0]/m_b[0];
+    rhsp[0] = rhs[0]/m_b[0];
+
+    for (size_t i=1; i<m_N-1; ++i) {
       size_t k = sub2ind(dir, nid, i+1);
-      d_[i]  = m_rhs[k];
-      cp_[i] = m_c[i] / (m_b[i] - m_a[i] * cp_[i-1]);
-      dp_[i] = (d_[i] - m_a[i]*dp_[i-1]) / (m_b[i] - m_a[i] * cp_[i-1]);
+      rhs[i]  = m_rhs[k];
+      cp[i] = m_c[i] / (m_b[i] - m_a[i] * cp[i-1]);
+      rhsp[i] = (rhs[i] - m_a[i]*rhsp[i-1]) / (m_b[i] - m_a[i] * cp[i-1]);
     }
-    size_t i = m_N-1;
-    size_t k = sub2ind(dir, nid, i+1);
-    dp_[i] = (d_[i] - m_a[i]*dp_[i-1]) / (m_b[i] - m_a[i] * cp_[i-1]);
 
-    // back substitution phase
-    k = sub2ind(dir, nid, m_realN-2);
-    m_phi[k] = dp_[m_N-1];
-    for (int i=m_N-2; i>=0; i--) {
-      size_t k  = sub2ind(dir, nid, i+1);
-      size_t k1 = sub2ind(dir, nid, i+2);
-      m_phi[k] = dp_[i] - cp_[i] * m_phi[k1];
+    rhsp[m_N-1] = (rhs[m_N-1] - m_a[m_N-1]*rhsp[m_N-2]) / (m_b[m_N-1] - m_a[m_N-1] * cp[m_N-1]);
+    m_phi[sub2ind(dir, nid, m_realN-2)] = rhsp[m_N-1];
+
+    for (ssize_t i=static_cast<ssize_t>(m_N)-2; i>=0; --i) {
+      auto idx = static_cast<size_t>(i);
+      auto k  = sub2ind(dir, nid, idx+1);
+      auto k1 = sub2ind(dir, nid, idx+2);
+      m_phi[k] = rhsp[idx] - cp[idx] * m_phi[k1];
     }
   }
 };
@@ -220,7 +211,6 @@ int main(int argc, char *argv[])
 
 #pragma omp master
   std::cout << "D = " << D << "; L = " << L << "; N = " << N << "; dt = " << dt << std::endl;
-
 
   Diffusion2D system(D, L, N, dt);
 
