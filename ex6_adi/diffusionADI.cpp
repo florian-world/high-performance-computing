@@ -54,12 +54,12 @@ public:
 
   void midpointDerivative (Direction dir) {
       // picks the right difference in indicies
-      auto idxDiff = sub2ind(dir, 0, 1);
+      auto idxDiff = sub2ind(0, 1, dir);
   #pragma omp parallel for
       for (size_t iy=1; iy<m_realN-1; iy++) {
         for (size_t ix=1; ix<m_realN-1; ix++) {
           // always sum up in the same way
-          auto k = sub2ind(Direction::Y, ix, iy);
+          auto k = sub2ind(ix, iy, Direction::Y);
           auto k1 = k - idxDiff;
           auto k2 = k + idxDiff;
 
@@ -98,7 +98,7 @@ public:
 #pragma omp parallel for reduction(+:heat)
     for (size_t i = 1; i < m_realN-1; ++i)
       for (size_t j = 1; j < m_realN-1; ++j)
-        heat += m_dr * m_dr * m_phi[i * m_realN + j];
+        heat += m_dr * m_dr * m_phi[sub2ind(i, j)];
 
 #ifndef NDEBUG
     std::cout << "t = " << t << " heat = " << heat << '\n';
@@ -131,7 +131,7 @@ private:
     for (size_t i = 1; i < m_realN - 1; ++i)     // rows
       for (size_t j = 1; j < m_realN - 1; ++j) // columns
       {
-        auto k = sub2ind(Direction::X, i, j);
+        auto k = sub2ind(i, j);
         if (std::abs(start + (i-1)*m_dr) < bound && std::abs(start + (j-1)*m_dr) < bound)
           m_phi[k] = 1.0;
         else
@@ -147,7 +147,7 @@ private:
   std::vector<Diagnostics> m_diag;
   std::vector<double> m_a, m_b, m_c;
 
-  size_t sub2ind(const Direction dir, const size_t a, const size_t b)
+  size_t sub2ind(const size_t a, const size_t b, const Direction dir = Direction::X)
   {
     switch(dir) {
     case Direction::X:
@@ -164,25 +164,25 @@ private:
     std::vector<double> rhsp(m_N);
     std::vector<double> cp(m_N);
 
-    rhs[0] = m_rhs[sub2ind(dir, nid, 0)];
+    rhs[0] = m_rhs[sub2ind(dir, nid)];
 
     cp[0] = m_c[0]/m_b[0];
     rhsp[0] = rhs[0]/m_b[0];
 
     for (size_t i=1; i<m_N-1; ++i) {
-      size_t k = sub2ind(dir, nid, i+1);
+      size_t k = sub2ind(nid, i+1,dir);
       rhs[i]  = m_rhs[k];
       cp[i] = m_c[i] / (m_b[i] - m_a[i] * cp[i-1]);
       rhsp[i] = (rhs[i] - m_a[i]*rhsp[i-1]) / (m_b[i] - m_a[i] * cp[i-1]);
     }
 
     rhsp[m_N-1] = (rhs[m_N-1] - m_a[m_N-1]*rhsp[m_N-2]) / (m_b[m_N-1] - m_a[m_N-1] * cp[m_N-1]);
-    m_phi[sub2ind(dir, nid, m_realN-2)] = rhsp[m_N-1];
+    m_phi[sub2ind(nid, m_realN-2, dir)] = rhsp[m_N-1];
 
     for (ssize_t i=static_cast<ssize_t>(m_N)-2; i>=0; --i) {
       auto idx = static_cast<size_t>(i);
-      auto k  = sub2ind(dir, nid, idx+1);
-      auto k1 = sub2ind(dir, nid, idx+2);
+      auto k  = sub2ind(nid, idx+1, dir);
+      auto k1 = sub2ind(nid, idx+2, dir);
       m_phi[k] = rhsp[idx] - cp[idx] * m_phi[k1];
     }
   }
