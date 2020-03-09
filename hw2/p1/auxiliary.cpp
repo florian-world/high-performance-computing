@@ -1,5 +1,9 @@
 #include "wave.h"
 
+#include <string>
+
+using namespace std;
+
 WaveEquation::WaveEquation(int a_N, int a_procs_per_dim) {
   MPI_Comm_size(MPI_COMM_WORLD, &size);
   procs_per_dim = a_procs_per_dim;
@@ -7,7 +11,7 @@ WaveEquation::WaveEquation(int a_N, int a_procs_per_dim) {
   h = L / a_N;
   N = a_N / procs_per_dim;
 
-  // the chosen numerical method is stable if  dt <= h/sqrt(3)
+  // the chosen numerical methord is stable if  dt <= h/sqrt(3)
   dt = h / sqrt(3.0);
 
   FindCoordinates();

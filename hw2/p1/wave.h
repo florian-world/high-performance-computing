@@ -7,7 +7,7 @@
 #include <sstream>
 #include <string>
 
-#define USE_HDF5 // comment this line if you do not want hdf5 file output
+//#define USE_HDF5 // comment this line if you do not want hdf5 file output
                  // (suitable for visualization with Paraview)
 
 #ifdef USE_HDF5
