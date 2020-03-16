@@ -22,20 +22,6 @@ void WaveEquation::FindCoordinates() {
   MPI_Cart_shift(cart_comm, 1, 1, &rank_minus[1], &rank_plus[1]);
   MPI_Cart_shift(cart_comm, 2, 1, &rank_minus[2], &rank_plus[2]);
   MPI_Cart_coords(cart_comm, rank, 3, coords);
-
-//  int nums_check[3];
-//  int periodic_check[3];
-//  int coords_check[3];
-//  MPI_Cart_get(cart_comm, 3, nums_check, periodic_check, coords_check);
-//  assert(nums_check[0] == nums[0]);
-//  assert(nums_check[1] == nums[1]);
-//  assert(nums_check[2] == nums[2]);
-//  assert(periodic_check[0] == periodic[0]);
-//  assert(periodic_check[1] == periodic[1]);
-//  assert(periodic_check[2] == periodic[2]);
-//  assert(coords_check[0] == coords[0]);
-//  assert(coords_check[1] == coords[1]);
-//  assert(coords_check[2] == coords[2]);
 }
 
 // This function is not needed when custom datatypes are used
@@ -147,21 +133,13 @@ void WaveEquation::run(double t_end) {
 
   /************************************************************************************************/
 
-  std::cout << "rank: " << rank << " SURVIVED DATATYPE CREATION" << std::endl;
-
-
   int count = 0;
   do {
     if (count % 100 == 0) {
       if (rank == 0)
         std::cout << count << " t=" << t << "\n";
-      std::cout << "rank: " << rank << " Calling Print now..." << std::endl;
       Print(count);
-      std::cout << "rank: " << rank << " Printing survived!" << std::endl;
     }
-
-
-    std::cout << "rank: " << rank << " ENTERING SENDING LOOP" << std::endl;
 
     MPI_Request request[12];
 

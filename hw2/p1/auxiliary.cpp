@@ -184,12 +184,10 @@ void WaveEquation::Print(int kt = 0) {
 #else
 
   string name = "Wave__" + std::to_string(kt) + ".txt";
-  std::cout << "rank: " << rank << " Opening file '" << name << "' now" << std::endl;
   MPI_File file;
   MPI_File_open(cart_comm, name.c_str(), MPI_MODE_RDWR | MPI_MODE_CREATE,
                 MPI_INFO_NULL, &file);
 
-  std::cout << "rank: " << rank << " creating stringstream now" << std::endl;
   stringstream ss;
 
   for (int i0 = 0; i0 < N; i0++) {
