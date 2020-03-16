@@ -9,7 +9,7 @@
 
 void WaveEquation::setValueOnGrid(int i0, int i1, int i2, double value)
 {
-  u[(i0 + 1) * (N + 2) * (N + 2) + (i1 + 1) * (N + 2) + (i2 + 1)] = value;
+  u[(i0) * (N + 2) * (N + 2) + (i1) * (N + 2) + (i2)] = value;
 }
 
 void WaveEquation::FindCoordinates() {
@@ -28,16 +28,6 @@ void WaveEquation::FindCoordinates() {
   MPI_Cart_shift(cart_comm, 1, 1, &rank_minus[1], &rank_plus[1]);
   MPI_Cart_shift(cart_comm, 2, 1, &rank_minus[2], &rank_plus[2]);
   MPI_Cart_coords(cart_comm, rank, 3, coords);
-
-  for (int i1 = 0; i1 < N; i1++)
-    for (int i2 = 0; i2 < N; i2++) {
-      if (rank_minus[0] == MPI_PROC_NULL) setValueOnGrid(-1,i1,i2, exp(-10));
-      if (rank_plus[0] == MPI_PROC_NULL) setValueOnGrid(N+1,i1,i2, exp(-10));
-      if (rank_minus[1] == MPI_PROC_NULL) setValueOnGrid(i1,-1,i2, exp(-10));
-      if (rank_plus[1] == MPI_PROC_NULL) setValueOnGrid(i1,N+1,i2, exp(-10));
-      if (rank_minus[2] == MPI_PROC_NULL) setValueOnGrid(i1,i2,-1, exp(-10));
-      if (rank_plus[2] == MPI_PROC_NULL) setValueOnGrid(i1,i2,N+1, exp(-10));
-    }
 }
 
 /********************************************************************/ 
@@ -46,7 +36,6 @@ void WaveEquation::FindCoordinates() {
 /* double *pack[6] and double *unpack[6].                           */
 /********************************************************************/
 void WaveEquation::run(double t_end) {
-
   t = 0;
 
   /********************************************************************/ 
@@ -105,6 +94,19 @@ void WaveEquation::run(double t_end) {
   MPI_Type_commit(&RECV_FACE_MINUS[0]); MPI_Type_commit(&RECV_FACE_MINUS[1]); MPI_Type_commit(&RECV_FACE_MINUS[2]);
 
   /************************************************************************************************/
+
+  /** Set non-periodic boundary conditions **/
+
+  for (int i1 = 0; i1 < N; i1++)
+    for (int i2 = 0; i2 < N; i2++) {
+      if (rank_minus[0] == MPI_PROC_NULL) setValueOnGrid(0,i1,i2, exp(-10));
+      if (rank_plus[0] == MPI_PROC_NULL) setValueOnGrid(N+1,i1,i2, exp(-10));
+      if (rank_minus[1] == MPI_PROC_NULL) setValueOnGrid(i1,0,i2, exp(-10));
+      if (rank_plus[1] == MPI_PROC_NULL) setValueOnGrid(i1,N+1,i2, exp(-10));
+      if (rank_minus[2] == MPI_PROC_NULL) setValueOnGrid(i1,i2,0, exp(-10));
+      if (rank_plus[2] == MPI_PROC_NULL) setValueOnGrid(i1,i2,N+1, exp(-10));
+    }
+
 
   int count = 0;
   do {
