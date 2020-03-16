@@ -6,10 +6,16 @@
 /* Subquestion a: change the following function and use a Cartesian */ 
 /* topology to find coords[3], rank_plus[3] and rank_minus[3]       */
 /********************************************************************/
+
+void WaveEquation::setValueOnGrid(int i0, int i1, int i2, double value)
+{
+  u[(i0 + 1) * (N + 2) * (N + 2) + (i1 + 1) * (N + 2) + (i2 + 1)] = value;
+}
+
 void WaveEquation::FindCoordinates() {
 
   int nums[3] = {0,0,0};
-  int periodic[3] = {true, true, true};
+  int periodic[3] = {false, false, false};
   MPI_Dims_create(size, 3, nums); // split the nodes automatically
 
   MPI_Cart_create(MPI_COMM_WORLD, 3, nums, periodic, true, &cart_comm);
@@ -22,6 +28,16 @@ void WaveEquation::FindCoordinates() {
   MPI_Cart_shift(cart_comm, 1, 1, &rank_minus[1], &rank_plus[1]);
   MPI_Cart_shift(cart_comm, 2, 1, &rank_minus[2], &rank_plus[2]);
   MPI_Cart_coords(cart_comm, rank, 3, coords);
+
+  for (int i1 = 0; i1 < N; i1++)
+    for (int i2 = 0; i2 < N; i2++) {
+      if (rank_minus[0] == MPI_PROC_NULL) setValueOnGrid(-1,i1,i2, exp(-10));
+      if (rank_plus[0] == MPI_PROC_NULL) setValueOnGrid(N+1,i1,i2, exp(-10));
+      if (rank_minus[1] == MPI_PROC_NULL) setValueOnGrid(i1,-1,i2, exp(-10));
+      if (rank_plus[1] == MPI_PROC_NULL) setValueOnGrid(i1,N+1,i2, exp(-10));
+      if (rank_minus[2] == MPI_PROC_NULL) setValueOnGrid(i1,i2,-1, exp(-10));
+      if (rank_plus[2] == MPI_PROC_NULL) setValueOnGrid(i1,i2,N+1, exp(-10));
+    }
 }
 
 /********************************************************************/ 

@@ -45,6 +45,7 @@ struct WaveEquation {
 
   ~WaveEquation();
   WaveEquation(int a_N, int a_procs_per_dim);
+  void setValueOnGrid(int i0, int i1, int i2, double value);
   void FindCoordinates();
   double Initial_Condition(double x0, double x1, double x2);
   void UpdateGridPoint(int i0, int i1, int i2);
