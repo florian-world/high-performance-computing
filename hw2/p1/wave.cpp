@@ -24,49 +24,6 @@ void WaveEquation::FindCoordinates() {
   MPI_Cart_coords(cart_comm, rank, 3, coords);
 }
 
-// This function is not needed when custom datatypes are used
-void WaveEquation::pack_face(double *pack, int array_of_sizes[3],
-                             int array_of_subsizes[3], int array_of_starts[3]) {
-  int p0 = array_of_subsizes[0];
-  int p1 = array_of_subsizes[1];
-  int p2 = array_of_subsizes[2];
-
-  int n1 = array_of_sizes[1];
-  int n2 = array_of_sizes[2];
-
-  for (int i0 = array_of_starts[0]; i0 < array_of_starts[0] + p0; i0++)
-    for (int i1 = array_of_starts[1]; i1 < array_of_starts[1] + p1; i1++)
-      for (int i2 = array_of_starts[2]; i2 < array_of_starts[2] + p2; i2++) {
-        int i = (i0 - array_of_starts[0]) * p1 * p2 +
-                (i1 - array_of_starts[1]) * p2 + (i2 - array_of_starts[2]);
-        pack[i] = *(u + i0 * n1 * n2 + i1 * n2 + i2);
-      }
-}
-
-// This function is not needed when custom datatypes are used
-void WaveEquation::unpack_face(double *pack, int array_of_sizes[3],
-                               int array_of_subsizes[3],
-                               int array_of_starts[3]) {
-  int p0 = array_of_subsizes[0];
-  int p1 = array_of_subsizes[1];
-  int p2 = array_of_subsizes[2];
-
-  int n1 = array_of_sizes[1];
-  int n2 = array_of_sizes[2];
-
-  for (int i0 = array_of_starts[0]; i0 < array_of_starts[0] + p0; i0++)
-    for (int i1 = array_of_starts[1]; i1 < array_of_starts[1] + p1; i1++)
-      for (int i2 = array_of_starts[2]; i2 < array_of_starts[2] + p2; i2++) {
-        int i = (i0 - array_of_starts[0]) * p1 * p2 +
-                (i1 - array_of_starts[1]) * p2 + (i2 - array_of_starts[2]);
-        *(u + i0 * n1 * n2 + i1 * n2 + i2) = pack[i];
-      }
-}
-
-
-
-
-
 /********************************************************************/ 
 /* Subquestion b: you should no longer need the functions pack_face */
 /* and unpack_face nor should you need to allocate memory by using  */
@@ -201,6 +158,4 @@ void WaveEquation::run(double t_end) {
   MPI_Type_free(&RECV_FACE_MINUS[0]); MPI_Type_free(&RECV_FACE_MINUS[1]); MPI_Type_free(&RECV_FACE_MINUS[2]);
 
   MPI_Comm_free(&cart_comm);
-
-  
 }
