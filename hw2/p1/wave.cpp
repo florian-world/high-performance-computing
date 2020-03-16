@@ -1,37 +1,41 @@
 #include "wave.h"
 
+#include <cassert>
+
 /********************************************************************/ 
 /* Subquestion a: change the following function and use a Cartesian */ 
 /* topology to find coords[3], rank_plus[3] and rank_minus[3]       */
 /********************************************************************/
 void WaveEquation::FindCoordinates() {
 
-  int p = procs_per_dim;
+  int nums[3] = {0,0,0};
+  int periodic[3] = {true, true, true};
+  MPI_Dims_create(size, 3, nums); // split the nodes automatically
 
-  cart_comm = MPI_COMM_WORLD;
+  MPI_Cart_create(MPI_COMM_WORLD, 3, nums, periodic, true, &cart_comm);
   MPI_Comm_rank(cart_comm, &rank);
+  if (rank == 0) {
+    std::cout << "Grid: " << nums[0] << ", " << nums[1] << ", " << nums[2] << std::endl;
+  }
 
-  coords[0] = rank / (p * p);
+  MPI_Cart_shift(cart_comm, 0, 1, &rank_minus[0], &rank_plus[0]);
+  MPI_Cart_shift(cart_comm, 1, 1, &rank_minus[1], &rank_plus[1]);
+  MPI_Cart_shift(cart_comm, 2, 1, &rank_minus[2], &rank_plus[2]);
+  MPI_Cart_coords(cart_comm, rank, 3, coords);
 
-  coords[1] = (rank - coords[0] * (p * p)) / p;
-
-  coords[2] = (rank - coords[0] * (p * p) - coords[1] * p) % p;
-
-  int coor_0_plus = (coords[0] + 1 + p) % p;
-  int coor_1_plus = (coords[1] + 1 + p) % p;
-  int coor_2_plus = (coords[2] + 1 + p) % p;
-
-  int coor_0_minus = (coords[0] - 1 + p) % p;
-  int coor_1_minus = (coords[1] - 1 + p) % p;
-  int coor_2_minus = (coords[2] - 1 + p) % p;
-
-  rank_plus[0] = (p * p) * coor_0_plus + coords[1] * p + coords[2];
-  rank_plus[1] = coords[0] * p * p + p * coor_1_plus + coords[2];
-  rank_plus[2] = coords[0] * p * p + coords[1] * p + coor_2_plus;
-
-  rank_minus[0] = (p * p) * coor_0_minus + coords[1] * p + coords[2];
-  rank_minus[1] = coords[0] * p * p + p * coor_1_minus + coords[2];
-  rank_minus[2] = coords[0] * p * p + coords[1] * p + coor_2_minus;
+//  int nums_check[3];
+//  int periodic_check[3];
+//  int coords_check[3];
+//  MPI_Cart_get(cart_comm, 3, nums_check, periodic_check, coords_check);
+//  assert(nums_check[0] == nums[0]);
+//  assert(nums_check[1] == nums[1]);
+//  assert(nums_check[2] == nums[2]);
+//  assert(periodic_check[0] == periodic[0]);
+//  assert(periodic_check[1] == periodic[1]);
+//  assert(periodic_check[2] == periodic[2]);
+//  assert(coords_check[0] == coords[0]);
+//  assert(coords_check[1] == coords[1]);
+//  assert(coords_check[2] == coords[2]);
 }
 
 // This function is not needed when custom datatypes are used
@@ -93,40 +97,57 @@ void WaveEquation::run(double t_end) {
   /* You should use MPI_Type_create_subarray for those datatypes.     */
   /********************************************************************/
 
-
-  /* Subquestion b: You can delete this part when the subquestion is completed. */
-  /************************************************************************************************/
-  double *pack[6];
-  pack[0] = new double[N * N];
-  pack[1] = new double[N * N];
-  pack[2] = new double[N * N];
-  pack[3] = new double[N * N];
-  pack[4] = new double[N * N];
-  pack[5] = new double[N * N];
-  double *unpack[6];
-  unpack[0] = new double[N * N];
-  unpack[1] = new double[N * N];
-  unpack[2] = new double[N * N];
-  unpack[3] = new double[N * N];
-  unpack[4] = new double[N * N];
-  unpack[5] = new double[N * N];
-  /************************************************************************************************/
-
-
-
-
-
-
   /* Subquestion b: Create and commit custom datatypes here */
   /************************************************************************************************/
   MPI_Datatype SEND_FACE_PLUS [3];
   MPI_Datatype SEND_FACE_MINUS[3]; 
 
   MPI_Datatype RECV_FACE_PLUS [3];
-  MPI_Datatype RECV_FACE_MINUS[3]; 
+  MPI_Datatype RECV_FACE_MINUS[3];
+
+  // same for all
+  int sizes[3] = {N+2, N+2, N+2};
+  int subsizes[3][3] = {{1, N, N},
+                        {N, 1, N},
+                        {N, N, 1}};
+
+  /** SEND **/
+  // same for all faces
+  int sendStartsMinus[3] = {1,1,1};
+  int sendStartsPlus[3][3] = {{N, 1, 1},
+                              {1, N, 1},
+                              {1, 1, N}};
+
+  MPI_Type_create_subarray(3, sizes, subsizes[0], sendStartsMinus, MPI_ORDER_C, MPI_DOUBLE, &SEND_FACE_MINUS[0]);
+  MPI_Type_create_subarray(3, sizes, subsizes[1], sendStartsMinus, MPI_ORDER_C, MPI_DOUBLE, &SEND_FACE_MINUS[1]);
+  MPI_Type_create_subarray(3, sizes, subsizes[2], sendStartsMinus, MPI_ORDER_C, MPI_DOUBLE, &SEND_FACE_MINUS[2]);
+  MPI_Type_create_subarray(3, sizes, subsizes[0], sendStartsPlus[0], MPI_ORDER_C, MPI_DOUBLE, &SEND_FACE_PLUS[0]);
+  MPI_Type_create_subarray(3, sizes, subsizes[1], sendStartsPlus[1], MPI_ORDER_C, MPI_DOUBLE, &SEND_FACE_PLUS[1]);
+  MPI_Type_create_subarray(3, sizes, subsizes[2], sendStartsPlus[2], MPI_ORDER_C, MPI_DOUBLE, &SEND_FACE_PLUS[2]);
+
+  /** RECEIVE **/
+  int recvStartsMinus[3][3] = {{0, 1, 1},
+                               {1, 0, 1},
+                               {1, 1, 0}};
+  int recvStartsPlus[3][3] = {{N + 1, 1, 1},
+                              {1, N + 1, 1},
+                              {1, 1, N + 1}};
+
+  MPI_Type_create_subarray(3, sizes, subsizes[0], recvStartsMinus[0], MPI_ORDER_C, MPI_DOUBLE, &RECV_FACE_MINUS[0]);
+  MPI_Type_create_subarray(3, sizes, subsizes[1], recvStartsMinus[1], MPI_ORDER_C, MPI_DOUBLE, &RECV_FACE_MINUS[1]);
+  MPI_Type_create_subarray(3, sizes, subsizes[2], recvStartsMinus[2], MPI_ORDER_C, MPI_DOUBLE, &RECV_FACE_MINUS[2]);
+  MPI_Type_create_subarray(3, sizes, subsizes[0], recvStartsPlus[0], MPI_ORDER_C, MPI_DOUBLE, &RECV_FACE_PLUS[0]);
+  MPI_Type_create_subarray(3, sizes, subsizes[1], recvStartsPlus[1], MPI_ORDER_C, MPI_DOUBLE, &RECV_FACE_PLUS[1]);
+  MPI_Type_create_subarray(3, sizes, subsizes[2], recvStartsPlus[2], MPI_ORDER_C, MPI_DOUBLE, &RECV_FACE_PLUS[2]);
+
+  MPI_Type_commit(&SEND_FACE_PLUS[0]); MPI_Type_commit(&SEND_FACE_PLUS[1]); MPI_Type_commit(&SEND_FACE_PLUS[2]);
+  MPI_Type_commit(&SEND_FACE_MINUS[0]); MPI_Type_commit(&SEND_FACE_MINUS[1]); MPI_Type_commit(&SEND_FACE_MINUS[2]);
+  MPI_Type_commit(&RECV_FACE_PLUS[0]); MPI_Type_commit(&RECV_FACE_PLUS[1]); MPI_Type_commit(&RECV_FACE_PLUS[2]);
+  MPI_Type_commit(&RECV_FACE_MINUS[0]); MPI_Type_commit(&RECV_FACE_MINUS[1]); MPI_Type_commit(&RECV_FACE_MINUS[2]);
+
   /************************************************************************************************/
 
-
+  std::cout << "rank: " << rank << " SURVIVED DATATYPE CREATION" << std::endl;
 
 
   int count = 0;
@@ -134,124 +155,39 @@ void WaveEquation::run(double t_end) {
     if (count % 100 == 0) {
       if (rank == 0)
         std::cout << count << " t=" << t << "\n";
+      std::cout << "rank: " << rank << " Calling Print now..." << std::endl;
       Print(count);
+      std::cout << "rank: " << rank << " Printing survived!" << std::endl;
     }
 
 
-  /* Subquestion b: You can delete this part when the subquestion is completed. */
-  /************************************************************************************************/
-    int array_of_sizes[3] = {N + 2, N + 2, N + 2};
-
-    {
-      int array_of_subsizes[3] = {1, N, N};
-      int array_of_starts[3] = {N, 1, 1};
-      pack_face(pack[0], array_of_sizes, array_of_subsizes, array_of_starts);
-    }
-
-    {
-      int array_of_subsizes[3] = {1, N, N};
-      int array_of_starts[3] = {1, 1, 1};
-      pack_face(pack[1], array_of_sizes, array_of_subsizes, array_of_starts);
-    }
-
-    {
-      int array_of_subsizes[3] = {N, 1, N};
-      int array_of_starts[3] = {1, N, 1};
-      pack_face(pack[2], array_of_sizes, array_of_subsizes, array_of_starts);
-    }
-
-    {
-      int array_of_subsizes[3] = {N, 1, N};
-      int array_of_starts[3] = {1, 1, 1};
-      pack_face(pack[3], array_of_sizes, array_of_subsizes, array_of_starts);
-    }
-
-    {
-      int array_of_subsizes[3] = {N, N, 1};
-      int array_of_starts[3] = {1, 1, N};
-      pack_face(pack[4], array_of_sizes, array_of_subsizes, array_of_starts);
-    }
-
-    {
-      int array_of_subsizes[3] = {N, N, 1};
-      int array_of_starts[3] = {1, 1, 1};
-      pack_face(pack[5], array_of_sizes, array_of_subsizes, array_of_starts);
-    }
-  /************************************************************************************************/
-
-
-
-
+    std::cout << "rank: " << rank << " ENTERING SENDING LOOP" << std::endl;
 
     MPI_Request request[12];
 
     /* Subquestion b: Replace the sends and receives with ones that correspond to custom datatypes*/
     /**********************************************************************************************/
-    MPI_Irecv(unpack[0], N * N, MPI_DOUBLE, rank_minus[0], 100, cart_comm,&request[0]);
-    MPI_Isend(pack  [0], N * N, MPI_DOUBLE, rank_plus [0], 100, cart_comm,&request[1]);
+    MPI_Irecv(u, 1, RECV_FACE_MINUS[0], rank_minus[0], 100, cart_comm, &request[0]);
+    MPI_Isend(u, 1, SEND_FACE_PLUS[0], rank_plus [0], 100, cart_comm, &request[1]);
 
-    MPI_Irecv(unpack[1], N * N, MPI_DOUBLE, rank_plus [0], 101, cart_comm, &request[2]);
-    MPI_Isend(pack  [1], N * N, MPI_DOUBLE, rank_minus[0], 101, cart_comm, &request[3]);
+    MPI_Irecv(u, 1, RECV_FACE_PLUS[0], rank_plus [0], 101, cart_comm, &request[2]);
+    MPI_Isend(u, 1, SEND_FACE_MINUS[0], rank_minus[0], 101, cart_comm, &request[3]);
 
-    MPI_Irecv(unpack[2], N * N, MPI_DOUBLE, rank_minus[1], 200, cart_comm, &request[4]);
-    MPI_Isend(pack  [2], N * N, MPI_DOUBLE, rank_plus [1], 200, cart_comm, &request[5]);
+    MPI_Irecv(u, 1, RECV_FACE_MINUS[1], rank_minus[1], 200, cart_comm, &request[4]);
+    MPI_Isend(u, 1, SEND_FACE_PLUS[1], rank_plus [1], 200, cart_comm, &request[5]);
 
-    MPI_Irecv(unpack[3], N * N, MPI_DOUBLE, rank_plus [1], 201, cart_comm, &request[6]);
-    MPI_Isend(pack  [3], N * N, MPI_DOUBLE, rank_minus[1], 201, cart_comm, &request[7]);
+    MPI_Irecv(u, 1, RECV_FACE_PLUS[1], rank_plus [1], 201, cart_comm, &request[6]);
+    MPI_Isend(u, 1, SEND_FACE_MINUS[1], rank_minus[1], 201, cart_comm, &request[7]);
 
-    MPI_Irecv(unpack[4], N * N, MPI_DOUBLE, rank_minus[2], 300, cart_comm, &request[8]);
-    MPI_Isend(pack  [4], N * N, MPI_DOUBLE, rank_plus [2], 300, cart_comm, &request[9]);
+    MPI_Irecv(u, 1, RECV_FACE_MINUS[2], rank_minus[2], 300, cart_comm, &request[8]);
+    MPI_Isend(u, 1, SEND_FACE_PLUS[2], rank_plus [2], 300, cart_comm, &request[9]);
 
-    MPI_Irecv(unpack[5], N * N, MPI_DOUBLE, rank_plus [2], 301, cart_comm, &request[10]);
-    MPI_Isend(pack  [5], N * N, MPI_DOUBLE, rank_minus[2], 301, cart_comm, &request[11]);
+    MPI_Irecv(u, 1, RECV_FACE_PLUS[2], rank_plus [2], 301, cart_comm, &request[10]);
+    MPI_Isend(u, 1, SEND_FACE_MINUS[2], rank_minus[2], 301, cart_comm, &request[11]);
     /**********************************************************************************************/
 
     // Wait for communication to finish
     MPI_Waitall(12, &request[0], MPI_STATUSES_IGNORE);
-
-
-
-
-  /* Subquestion b: You can delete this part when the subquestion is completed. */
-  /************************************************************************************************/
-    {
-      int array_of_subsizes[3] = {1, N, N};
-      int array_of_starts[3] = {0, 1, 1};
-      unpack_face(unpack[0], array_of_sizes, array_of_subsizes,
-                  array_of_starts);
-    }
-    {
-      int array_of_subsizes[3] = {1, N, N};
-      int array_of_starts[3] = {N + 1, 1, 1};
-      unpack_face(unpack[1], array_of_sizes, array_of_subsizes,
-                  array_of_starts);
-    }
-    {
-      int array_of_subsizes[3] = {N, 1, N};
-      int array_of_starts[3] = {1, 0, 1};
-      unpack_face(unpack[2], array_of_sizes, array_of_subsizes,
-                  array_of_starts);
-    }
-    {
-      int array_of_subsizes[3] = {N, 1, N};
-      int array_of_starts[3] = {1, N + 1, 1};
-      unpack_face(unpack[3], array_of_sizes, array_of_subsizes,
-                  array_of_starts);
-    }
-    {
-      int array_of_subsizes[3] = {N, N, 1};
-      int array_of_starts[3] = {1, 1, 0};
-      unpack_face(unpack[4], array_of_sizes, array_of_subsizes,
-                  array_of_starts);
-    }
-    {
-      int array_of_subsizes[3] = {N, N, 1};
-      int array_of_starts[3] = {1, 1, N + 1};
-      unpack_face(unpack[5], array_of_sizes, array_of_subsizes,
-                  array_of_starts);
-    }
-   /************************************************************************************************/
-
 
     for (int i0 = 1; i0 <= N; i0++)
       for (int i1 = 1; i1 <= N; i1++)
@@ -279,20 +215,14 @@ void WaveEquation::run(double t_end) {
   if (rank == 0)
     std::cout << "Checksum = " << Checksum << "\n";
 
-  delete[] pack[5];
-  delete[] pack[4];
-  delete[] pack[3];
-  delete[] pack[2];
-  delete[] pack[1];
-  delete[] pack[0];
-  delete[] unpack[5];
-  delete[] unpack[4];
-  delete[] unpack[3];
-  delete[] unpack[2];
-  delete[] unpack[1];
-  delete[] unpack[0];
-
   /* Subquestion b: You should free the custom datatypes and the communicator here. */
+
+  MPI_Type_free(&SEND_FACE_PLUS[0]); MPI_Type_free(&SEND_FACE_PLUS[1]); MPI_Type_free(&SEND_FACE_PLUS[2]);
+  MPI_Type_free(&SEND_FACE_MINUS[0]); MPI_Type_free(&SEND_FACE_MINUS[1]); MPI_Type_free(&SEND_FACE_MINUS[2]);
+  MPI_Type_free(&RECV_FACE_PLUS[0]); MPI_Type_free(&RECV_FACE_PLUS[1]); MPI_Type_free(&RECV_FACE_PLUS[2]);
+  MPI_Type_free(&RECV_FACE_MINUS[0]); MPI_Type_free(&RECV_FACE_MINUS[1]); MPI_Type_free(&RECV_FACE_MINUS[2]);
+
+  MPI_Comm_free(&cart_comm);
 
   
 }

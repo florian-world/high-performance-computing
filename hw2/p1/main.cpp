@@ -25,6 +25,10 @@ int main(int argc, char **argv) {
   int procs_per_dim = atoi(argv[2]);
   double t_end = atof(argv[3]);
 
+  if (rank == 0) {
+    std::cout << "Running with " << size << " rankes" << std::endl;
+  }
+
   if (size != procs_per_dim * procs_per_dim * procs_per_dim) {
     if (rank == 0)
       std::cout << " Incorrect number of ranks per direction. Aborting... \n";
