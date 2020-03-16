@@ -6,7 +6,7 @@ all: main
 %.o: %.cpp
 	$(CXX) -c -o $@ $< $(CXXFLAGS)
 clean:
-	rm -rf *.o *.xmf *h5 *txt main
+	rm -rf *.o *.xmf *h5 Wave__*txt main
 
 main: main.o auxiliary.o wave.o
 	$(CXX) $(CXXFLAGS)-I. -o main $^
