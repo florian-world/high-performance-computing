@@ -18,9 +18,9 @@ int main(int argc, char* argv[])
   double *A,*B,*C, *tmpA, *tmpB;
   MPI_Request request[2];
 
-  int rank, size;
+  int rank, size, old_rank;
   MPI_Init(&argc, &argv);
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_rank(MPI_COMM_WORLD, &old_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
  /**********************************************************
@@ -30,14 +30,23 @@ int main(int argc, char* argv[])
   int p = sqrt(size);
   if (size != p*p) { printf("[Error] Number of processors must be a square integer.\n"); MPI_Abort(MPI_COMM_WORLD, -1); }
 
-  int ranky = rank/p;
-  int rankx = rank%p;
+  // no need for automatic detection
+  MPI_Comm cart_comm;
+  int nums[2] = {p,p};
+  int periodic[2] = {true, true};
+  MPI_Cart_create(MPI_COMM_WORLD, 2, nums, periodic, true, &cart_comm);
+  MPI_Comm_rank(cart_comm, &rank);
+
+  std::cout << "rank: " << old_rank << " -> " << rank << std::endl;
 
   int up, down, left, right;
-  up = (rank - p + size)%size;
-  down = (rank + p)%size;
-  left = rank - 1 + (rank%p==0?p:0);
-  right = rank + 1 - (rank%p==p-1?p:0);
+  MPI_Cart_shift(cart_comm, 1, 1, &left, &right);
+  MPI_Cart_shift(cart_comm, 0, 1, &up, &down);
+  int coords[2];
+  MPI_Cart_coords(cart_comm, rank, 2, coords);
+
+  int ranky = coords[0];
+  int rankx = coords[1];
 
  /********************************************
   *   Initializing Matrices
