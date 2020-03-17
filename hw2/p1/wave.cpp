@@ -111,7 +111,7 @@ void WaveEquation::run(double t_end) {
 
   int count = 0;
   do {
-    if (count % 100 == 0) {
+    if (count % 5 == 0) {
       if (rank == 0)
         std::cout << count << " t=" << t << "\n";
       Print(count);
