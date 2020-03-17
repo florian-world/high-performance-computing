@@ -75,18 +75,18 @@ int main(int argc, char* argv[])
 
   // Registering initial time. It's important to precede this with a barrier to make sure
   // all ranks are ready to start when we take the time.
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(cart_comm);
   double execTime = -MPI_Wtime();
 
   dgemm_("N", "N", &n, &n, &n, &one, A, &n, B, &n, &one, C, &n);
   for(int step =1; step < p; step++)
   {
     // Currently MPI_DOUBLE as Datatype, let's create a special datatype for communicating submatrices
-    MPI_Irecv(tmpA, n*n, MPI_DOUBLE, right, 0, MPI_COMM_WORLD, &request[0]);
-    MPI_Irecv(tmpB, n*n, MPI_DOUBLE, down, 1, MPI_COMM_WORLD, &request[1]);
+    MPI_Irecv(tmpA, n*n, MPI_DOUBLE, right, 0, cart_comm, &request[0]);
+    MPI_Irecv(tmpB, n*n, MPI_DOUBLE, down, 1, cart_comm, &request[1]);
 
-    MPI_Send(A, n*n, MPI_DOUBLE, left, 0, MPI_COMM_WORLD);
-    MPI_Send(B, n*n, MPI_DOUBLE, up, 1, MPI_COMM_WORLD);
+    MPI_Send(A, n*n, MPI_DOUBLE, left, 0, cart_comm);
+    MPI_Send(B, n*n, MPI_DOUBLE, up, 1, cart_comm);
 
     MPI_Waitall(2, request, MPI_STATUS_IGNORE);
 
@@ -97,7 +97,7 @@ int main(int argc, char* argv[])
   }
 
   // Registering final time. It's important to precede this with a barrier to make sure all ranks have finished before we take the time.
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(cart_comm);
   execTime += MPI_Wtime();
 
  /**************************************************************
@@ -106,5 +106,7 @@ int main(int argc, char* argv[])
 
   verifyMatMulResults(C, n, N, rankx, ranky, execTime);
   free(A); free(B); free(C); free(tmpA); free(tmpB);
+
+  MPI_Comm_free(&cart_comm);
   return MPI_Finalize();
 }
