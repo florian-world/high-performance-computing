@@ -97,15 +97,16 @@ void WaveEquation::run(double t_end) {
 
   /** Set non-periodic boundary conditions **/
 
-  for (int i1 = 0; i1 < N; i1++)
-    for (int i2 = 0; i2 < N; i2++) {
-      if (rank_minus[0] == MPI_PROC_NULL) setValueOnGrid(0,i1,i2, exp(-10));
-      if (rank_plus[0] == MPI_PROC_NULL) setValueOnGrid(N+1,i1,i2, exp(-10));
-      if (rank_minus[1] == MPI_PROC_NULL) setValueOnGrid(i1,0,i2, exp(-10));
-      if (rank_plus[1] == MPI_PROC_NULL) setValueOnGrid(i1,N+1,i2, exp(-10));
-      if (rank_minus[2] == MPI_PROC_NULL) setValueOnGrid(i1,i2,0, exp(-10));
-      if (rank_plus[2] == MPI_PROC_NULL) setValueOnGrid(i1,i2,N+1, exp(-10));
-    }
+  // for previous version of problem statement:
+//  for (int i1 = 0; i1 < N; i1++)
+//    for (int i2 = 0; i2 < N; i2++) {
+//      if (rank_minus[0] == MPI_PROC_NULL) setValueOnGrid(0,i1,i2, exp(-10));
+//      if (rank_plus[0] == MPI_PROC_NULL) setValueOnGrid(N+1,i1,i2, exp(-10));
+//      if (rank_minus[1] == MPI_PROC_NULL) setValueOnGrid(i1,0,i2, exp(-10));
+//      if (rank_plus[1] == MPI_PROC_NULL) setValueOnGrid(i1,N+1,i2, exp(-10));
+//      if (rank_minus[2] == MPI_PROC_NULL) setValueOnGrid(i1,i2,0, exp(-10));
+//      if (rank_plus[2] == MPI_PROC_NULL) setValueOnGrid(i1,i2,N+1, exp(-10));
+//    }
 
 
   int count = 0;

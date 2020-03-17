@@ -20,11 +20,11 @@ WaveEquation::WaveEquation(int a_N, int a_procs_per_dim) {
   origin[1] = coords[1] * N * h;
   origin[2] = coords[2] * N * h;
   u = new double[(N + 2) * (N + 2) * (N + 2)];
-  for (int i0 = 0; i0 < N; i0++) {
+  for (int i0 = -1; i0 < N+1; i0++) {
     double x0 = origin[0] + i0 * h + 0.5 * h;
-    for (int i1 = 0; i1 < N; i1++) {
+    for (int i1 = -1; i1 < N+1; i1++) {
       double x1 = origin[1] + i1 * h + 0.5 * h;
-      for (int i2 = 0; i2 < N; i2++) {
+      for (int i2 = -1; i2 < N+1; i2++) {
         double x2 = origin[2] + i2 * h + 0.5 * h;
         u[(i0 + 1) * (N + 2) * (N + 2) + (i1 + 1) * (N + 2) + (i2 + 1)] =
             Initial_Condition(x0, x1, x2);
@@ -35,9 +35,9 @@ WaveEquation::WaveEquation(int a_N, int a_procs_per_dim) {
   u_old = new double[(N + 2) * (N + 2) * (N + 2)];
   u_new = new double[(N + 2) * (N + 2) * (N + 2)];
 
-  for (int i0 = 1; i0 <= N; i0++)
-    for (int i1 = 1; i1 <= N; i1++)
-      for (int i2 = 1; i2 <= N; i2++) {
+  for (int i0 = 0; i0 <= N+1; i0++)
+    for (int i1 = 0; i1 <= N+1; i1++)
+      for (int i2 = 0; i2 <= N+1; i2++) {
         int m = i2 + i1 * (N + 2) + i0 * (N + 2) * (N + 2);
         u_new[m] = u[m];
         u_old[m] = u[m];
@@ -55,7 +55,7 @@ WaveEquation::~WaveEquation() {
 
 double WaveEquation::Initial_Condition(double x0, double x1, double x2) {
   double r =
-      (x0 - 0.5) * (x0 - 0.5) + (x1 - 0.5) * (x1 - 0.5); //+ (x2-0.5)*(x2-0.5);
+      (x0 - 0.5) * (x0 - 0.5) + (x1 - 0.5) * (x1 - 0.5) + (x2-0.5)*(x2-0.5);
   return exp(-r / 0.1);
 }
 
