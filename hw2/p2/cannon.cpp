@@ -18,9 +18,8 @@ int main(int argc, char* argv[])
   double *A,*B,*C, *tmpA, *tmpB;
   MPI_Request request[2];
 
-  int rank, size, old_rank;
+  int rank, rank;
   MPI_Init(&argc, &argv);
-  MPI_Comm_rank(MPI_COMM_WORLD, &old_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
  /**********************************************************
@@ -36,8 +35,6 @@ int main(int argc, char* argv[])
   int periodic[2] = {true, true};
   MPI_Cart_create(MPI_COMM_WORLD, 2, nums, periodic, true, &cart_comm);
   MPI_Comm_rank(cart_comm, &rank);
-
-  std::cout << "rank: " << old_rank << " -> " << rank << std::endl;
 
   int up, down, left, right;
   MPI_Cart_shift(cart_comm, 1, 1, &left, &right);
@@ -75,6 +72,11 @@ int main(int argc, char* argv[])
 
   // Registering initial time. It's important to precede this with a barrier to make sure
   // all ranks are ready to start when we take the time.
+
+  MPI_Datatype SUBMATRIX;
+  MPI_Type_contiguous(n*n, MPI_DOUBLE, &SUBMATRIX);
+  MPI_Type_commit(&SUBMATRIX);
+
   MPI_Barrier(cart_comm);
   double execTime = -MPI_Wtime();
 
@@ -82,11 +84,11 @@ int main(int argc, char* argv[])
   for(int step =1; step < p; step++)
   {
     // Currently MPI_DOUBLE as Datatype, let's create a special datatype for communicating submatrices
-    MPI_Irecv(tmpA, n*n, MPI_DOUBLE, right, 0, cart_comm, &request[0]);
-    MPI_Irecv(tmpB, n*n, MPI_DOUBLE, down, 1, cart_comm, &request[1]);
+    MPI_Irecv(tmpA, 1, SUBMATRIX, right, 0, cart_comm, &request[0]);
+    MPI_Irecv(tmpB, 1, SUBMATRIX, down, 1, cart_comm, &request[1]);
 
-    MPI_Send(A, n*n, MPI_DOUBLE, left, 0, cart_comm);
-    MPI_Send(B, n*n, MPI_DOUBLE, up, 1, cart_comm);
+    MPI_Send(A, 1, SUBMATRIX, left, 0, cart_comm);
+    MPI_Send(B, 1, SUBMATRIX, up, 1, cart_comm);
 
     MPI_Waitall(2, request, MPI_STATUS_IGNORE);
 
@@ -107,6 +109,7 @@ int main(int argc, char* argv[])
   verifyMatMulResults(C, n, N, rankx, ranky, execTime);
   free(A); free(B); free(C); free(tmpA); free(tmpB);
 
+  MPI_Type_free(&SUBMATRIX);
   MPI_Comm_free(&cart_comm);
   return MPI_Finalize();
 }
