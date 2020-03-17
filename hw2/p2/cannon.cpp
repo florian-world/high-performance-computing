@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
   double *A,*B,*C, *tmpA, *tmpB;
   MPI_Request request[2];
 
-  int rank, rank;
+  int size, rank;
   MPI_Init(&argc, &argv);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
