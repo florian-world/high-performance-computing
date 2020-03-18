@@ -1,5 +1,5 @@
 CFLAGS = -O3
-LDFLAGS = -lblas
+LDFLAGS = -lopenblas
 CC =$(shell which mpicxx)
 
 .SECONDARY: 

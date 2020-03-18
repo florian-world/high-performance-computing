@@ -1,6 +1,9 @@
 #include "auxiliar.hpp"
 #include <math.h>
 #include <mpi.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 
 void initializeMatrices(double* A, double* B, const int n, const int N, const int rankx, const int ranky)
 {
