@@ -1,0 +1,84 @@
+HOW TO RUN
+----------
+To run the code on Euler remove all previously loaded nodules (purge) and load the following modules:
+
+module purge; 
+module load new; 
+module load gcc; 
+module load open_mpi/3.0.0; 
+module load hdf5;
+
+or run `source hw3.src`
+
+CORES NEEDED
+------------
+You will need a total of 64 cores. You can request them interactively by using the command
+
+bsub -n 72 -R "select[model==XeonE5_2680v3]fullnode" -W  04:00 -Is bash
+
+which will reserve three EulerII nodes (2 sockets each, 12 cores per socket).
+
+
+
+Then, you can type `make run_hybrid_v1` to execute the following commands
+
+export OMP_NUM_THREADS=8 ; 
+make clean ; 
+make ; 
+mpirun -n 8 --map-by ppr:3:node ./main 512 2 0.25
+
+This will map 3 MPI processes per node and make each process use 8 OPENMP threads (so the whole node of 24 cores will be used).
+
+
+To improve performance, you can instead map 2 MPI processes per node by using make run_hybrid_v2
+
+export OMP_NUM_THREADS=8 ; 
+make clean ; 
+make ; 
+mpirun -n 8 --map-by ppr:2:node ./main 512 2 0.25
+
+Having two processes per node will map each process to one of the two sockets of that node;
+if you have three processes per node then one processes will have 4 cores on one socket and 4 cores on another, which is slower.
+In that case, you will need to ask for 4 interactive nodes:
+
+bsub -n 96 -R "select[model==XeonE5_2680v3]fullnode" -W  04:00 -Is bash
+
+
+
+Asking for too many cores interactively may require some waiting time. 
+Alternatively, you may submit your jobs by using make submit (see Makefile), or you may ask for only one full node
+
+bsub -n 24 -R "select[model==XeonE5_2680v3]fullnode" -W  04:00 -Is bash
+
+and run your code by typing make develop (this will be slow, but you may use it to test the correctness of your results).
+
+
+
+*** IMPORTANT *** 
+You should type the command
+
+unset LSB_AFFINITY_HOSTFILE
+
+before running a hybrid code on Euler; this will allow you to specify thread and process affinity using the directives --map-by etc.
+Otherwise, those directives are ignored.
+
+
+
+
+
+WHAT TO MODIFY
+--------------
+You only need to change the code in wave.cpp
+When the code runs, it prints a checksum. This number should be the same for the solution you provide.
+
+
+CODE OUTPUT 
+-----------
+You are not asked to visualize any results in this question, but we thought I'd be nice if you can see what you are actually solving.
+Other outputs are .h5 files which can be used to visualize the solution. Each .h5 file corresponds to an .xmf file.
+You can use Paraview to open the .xmf files and visualize the results.
+Alternatively, you may comment out the line
+#define USE_HDF5
+with '//' in wave.h. In this case, the code will output simple .txt files with the solution, saved as
+x y z u
+...
