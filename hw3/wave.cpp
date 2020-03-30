@@ -272,9 +272,9 @@ void WaveEquation::run(double t_end) {
       int i0_max = i0_min + nloc;
       int i1_max = i1_min + nloc;
       int i2_max = i2_min + nloc;
-      for (int i0 = 2 + i0_min; i0 < i0_max; i0++)
-        for (int i1 = 2 + i1_min; i1 < i1_max; i1++)
-          for (int i2 = 2 + i2_min; i2 < i2_max; i2++)
+      for (int i0 = i0_min + (t0 == 0 ? 2 : 0); i0 < i0_max + (t0 == p-1 ? 0 : 1); i0++)
+        for (int i1 = i1_min + (t1 == 0 ? 2 : 0); i1 < i1_max + (t1 == p-1 ? 0 : 1); i1++)
+          for (int i2 = i2_min + (t2 == 0 ? 2 : 0); i2 < i2_max + (t2 == p-1 ? 0 : 1); i2++)
             UpdateGridPoint(i0, i1, i2);
 
 
@@ -283,20 +283,20 @@ void WaveEquation::run(double t_end) {
 
       for (int i1 = 1 + i1_min; i1 < i1_max + 1; i1++)
         for (int i2 = 1 + i2_min; i2 < i2_max + 1; i2++) {
-          UpdateGridPoint(1+i0_min, i1, i2);
-          UpdateGridPoint(i0_max, i1, i2);
+          if (t0 == 0) UpdateGridPoint(1+i0_min, i1, i2);
+          if (t0 == p-1) UpdateGridPoint(i0_max, i1, i2);
         }
 
       for (int i0 = 2 + i0_min; i0 < i0_max; i0++)
         for (int i2 = 1 + i2_min; i2 < i2_max + 1; i2++) {
-          UpdateGridPoint(i0, 1+i1_min, i2);
-          UpdateGridPoint(i0, i1_max, i2);
+          if (t1 == 0) UpdateGridPoint(i0, 1+i1_min, i2);
+          if (t1 == p-1) UpdateGridPoint(i0, i1_max, i2);
         }
 
       for (int i0 = 2 + i0_min; i0 < i0_max; i0++)
         for (int i1 = 2 + i1_min; i1 < i1_max; i1++) {
-          UpdateGridPoint(i0, i1, 1+i2_min);
-          UpdateGridPoint(i0, i1, i2_max);
+          if (t2 == 0) UpdateGridPoint(i0, i1, 1+i2_min);
+          if (t2 == p-1) UpdateGridPoint(i0, i1, i2_max);
         }
 
       // ********************************************************************************
