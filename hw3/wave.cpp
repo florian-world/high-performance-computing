@@ -25,53 +25,39 @@ void WaveEquation::pack_all() {
 
   if (t0 == p - 1) {
     int pid = 0 * threads_per_dim * threads_per_dim + t1 * threads_per_dim + t2;
+    int array_of_subsizes[3] = {1, nloc, nloc};
+    int array_of_starts[3] = {N, 1+t1*nloc, 1+t2*nloc};
+    pack_face(pack[pid], array_of_sizes, array_of_subsizes, array_of_starts);
   }
   if (t0 == 0) {
     int pid = 1 * threads_per_dim * threads_per_dim + t1 * threads_per_dim + t2;
+    int array_of_subsizes[3] = {1, nloc, nloc};
+    int array_of_starts[3] = {1, 1+t1*nloc, 1+t2*nloc};
+    pack_face(pack[pid], array_of_sizes, array_of_subsizes, array_of_starts);
   }
   if (t1 == p - 1) {
     int pid = 2 * threads_per_dim * threads_per_dim + t0 * threads_per_dim + t2;
+    int array_of_subsizes[3] = {nloc, 1, nloc};
+    int array_of_starts[3] = {1+t0*nloc, N, 1+t2*nloc};
+    pack_face(pack[pid], array_of_sizes, array_of_subsizes, array_of_starts);
   }
   if (t1 == 0) {
     int pid = 3 * threads_per_dim * threads_per_dim + t0 * threads_per_dim + t2;
+    int array_of_subsizes[3] = {nloc, 1, nloc};
+    int array_of_starts[3] = {1+t0*nloc, 1, 1+t2*nloc};
+    pack_face(pack[pid], array_of_sizes, array_of_subsizes, array_of_starts);
   }
   if (t2 == p - 1) {
     int pid = 4 * threads_per_dim * threads_per_dim + t0 * threads_per_dim + t1;
+    int array_of_subsizes[3] = {nloc, nloc, 1};
+    int array_of_starts[3] = {1+t0*nloc, 1+t1*nloc, N};
+    pack_face(pack[pid], array_of_sizes, array_of_subsizes, array_of_starts);
   }
   if (t2 == 0) {
     int pid = 5 * threads_per_dim * threads_per_dim + t0 * threads_per_dim + t1;
-  }
-
-  // You will need to remove this part, when you fill the if statements above
-  {
-    int array_of_subsizes[3] = {1, N, N};
-    int array_of_starts[3] = {N, 1, 1};
-    pack_face(pack[0], array_of_sizes, array_of_subsizes, array_of_starts);
-  }
-  {
-    int array_of_subsizes[3] = {1, N, N};
-    int array_of_starts[3] = {1, 1, 1};
-    pack_face(pack[1], array_of_sizes, array_of_subsizes, array_of_starts);
-  }
-  {
-    int array_of_subsizes[3] = {N, 1, N};
-    int array_of_starts[3] = {1, N, 1};
-    pack_face(pack[2], array_of_sizes, array_of_subsizes, array_of_starts);
-  }
-  {
-    int array_of_subsizes[3] = {N, 1, N};
-    int array_of_starts[3] = {1, 1, 1};
-    pack_face(pack[3], array_of_sizes, array_of_subsizes, array_of_starts);
-  }
-  {
-    int array_of_subsizes[3] = {N, N, 1};
-    int array_of_starts[3] = {1, 1, N};
-    pack_face(pack[4], array_of_sizes, array_of_subsizes, array_of_starts);
-  }
-  {
-    int array_of_subsizes[3] = {N, N, 1};
-    int array_of_starts[3] = {1, 1, 1};
-    pack_face(pack[5], array_of_sizes, array_of_subsizes, array_of_starts);
+    int array_of_subsizes[3] = {nloc, nloc, 1};
+    int array_of_starts[3] = {1+t0*nloc, 1+t1*nloc, 1};
+    pack_face(pack[pid], array_of_sizes, array_of_subsizes, array_of_starts);
   }
 }
 
@@ -102,53 +88,39 @@ void WaveEquation::unpack_all() {
 
   if (t0 == 0) {
     int pid = 0 * threads_per_dim * threads_per_dim + t1 * threads_per_dim + t2;
+    int array_of_subsizes[3] = {1, nloc, nloc};
+    int array_of_starts[3] = {0, 1+t1*nloc, 1+t2*nloc};
+    unpack_face(pack[pid], array_of_sizes, array_of_subsizes, array_of_starts);
   }
   if (t0 == p - 1) {
     int pid = 1 * threads_per_dim * threads_per_dim + t1 * threads_per_dim + t2;
+    int array_of_subsizes[3] = {1, nloc, nloc};
+    int array_of_starts[3] = {N+1, 1+t1*nloc, 1+t2*nloc};
+    unpack_face(pack[pid], array_of_sizes, array_of_subsizes, array_of_starts);
   }
   if (t1 == 0) {
     int pid = 2 * threads_per_dim * threads_per_dim + t0 * threads_per_dim + t2;
+    int array_of_subsizes[3] = {nloc, 1, nloc};
+    int array_of_starts[3] = {1+t0*nloc, 0, 1+t2*nloc};
+    unpack_face(pack[pid], array_of_sizes, array_of_subsizes, array_of_starts);
   }
   if (t1 == p - 1) {
     int pid = 3 * threads_per_dim * threads_per_dim + t0 * threads_per_dim + t2;
+    int array_of_subsizes[3] = {nloc, 1, nloc};
+    int array_of_starts[3] = {1+t0*nloc, N+1, 1+t2*nloc};
+    unpack_face(pack[pid], array_of_sizes, array_of_subsizes, array_of_starts);
   }
   if (t2 == 0) {
     int pid = 4 * threads_per_dim * threads_per_dim + t0 * threads_per_dim + t1;
+    int array_of_subsizes[3] = {nloc, nloc, 1};
+    int array_of_starts[3] = {1+t0*nloc, 1+t1*nloc, 0};
+    unpack_face(pack[pid], array_of_sizes, array_of_subsizes, array_of_starts);
   }
   if (t2 == p - 1) {
     int pid = 5 * threads_per_dim * threads_per_dim + t0 * threads_per_dim + t1;
-  }
-
-  // You will need to remove this part, when you fill the if statements above
-  {
-    int array_of_subsizes[3] = {1, N, N};
-    int array_of_starts[3] = {0, 1, 1};
-    unpack_face(unpack[0], array_of_sizes, array_of_subsizes, array_of_starts);
-  }
-  {
-    int array_of_subsizes[3] = {1, N, N};
-    int array_of_starts[3] = {N + 1, 1, 1};
-    unpack_face(unpack[1], array_of_sizes, array_of_subsizes, array_of_starts);
-  }
-  {
-    int array_of_subsizes[3] = {N, 1, N};
-    int array_of_starts[3] = {1, 0, 1};
-    unpack_face(unpack[2], array_of_sizes, array_of_subsizes, array_of_starts);
-  }
-  {
-    int array_of_subsizes[3] = {N, 1, N};
-    int array_of_starts[3] = {1, N + 1, 1};
-    unpack_face(unpack[3], array_of_sizes, array_of_subsizes, array_of_starts);
-  }
-  {
-    int array_of_subsizes[3] = {N, N, 1};
-    int array_of_starts[3] = {1, 1, 0};
-    unpack_face(unpack[4], array_of_sizes, array_of_subsizes, array_of_starts);
-  }
-  {
-    int array_of_subsizes[3] = {N, N, 1};
-    int array_of_starts[3] = {1, 1, N + 1};
-    unpack_face(unpack[5], array_of_sizes, array_of_subsizes, array_of_starts);
+    int array_of_subsizes[3] = {nloc, nloc, 1};
+    int array_of_starts[3] = {1+t0*nloc, 1+t1*nloc, N+1};
+    unpack_face(pack[pid], array_of_sizes, array_of_subsizes, array_of_starts);
   }
 }
 
@@ -162,7 +134,7 @@ void WaveEquation::run(double t_end) {
   //             variable n so that each pack/unpack has the correct size (n =
   //             N^2 is correct only when a single thread is used).
   // ********************************************************************************
-  int n = N * N;
+  int n = N * N / (threads_per_dim*threads_per_dim);
   for (int i = 0; i < 6 * threads_per_dim * threads_per_dim; i++) {
     pack[i] = new double[n];
     unpack[i] = new double[n];
@@ -187,7 +159,6 @@ void WaveEquation::run(double t_end) {
       // Print(count); //saving data really slows down the code
     }
 
-    pack_all();
 
     // ********************************************************************************
     // Question 2: multiple threads send and receive messages, according to their
@@ -195,73 +166,112 @@ void WaveEquation::run(double t_end) {
     //             Be careful to correctly match the message tags pid_send and
     //             pid_recv that also correspond to the pack/unpack arrays.
     // ********************************************************************************
-    int nloc = N / threads_per_dim;
-    int p = threads_per_dim;
-    int tid = omp_get_thread_num();
-    int t0, t1, t2;
-    thread_coordinates(tid, threads_per_dim, t0, t1, t2);
-    int pid_send, pid_recv;
+#pragma omp parallel
+    {
+      // call pack_all inside the parallel region (easier refactoring later)
+      pack_all();
+      int nloc = N / threads_per_dim;
+      int p = threads_per_dim;
+      int tid = omp_get_thread_num();
+      int t0, t1, t2;
+      thread_coordinates(tid, threads_per_dim, t0, t1, t2);
+      int pid_send, pid_recv;
 
-    std::vector<MPI_Request> local_request;
-    if (t0 == 0) {
-      local_request.resize(local_request.size() + 2);
+//      std::cerr << "thread_num: " << tid << " threads_per_dim: " << threads_per_dim << std::endl;
 
-      pid_recv =
-          0 * threads_per_dim * threads_per_dim + t1 * threads_per_dim + t2;
+//      std::cerr << "thread_num: " << tid << " thread_coordinates: " << t0 << ' ' << t1 << ' ' << t2 << std::endl;
 
-      pid_send =
-          1 * threads_per_dim * threads_per_dim + t1 * threads_per_dim + t2;
-    }
-    if (t0 == p - 1) {
-      local_request.resize(local_request.size() + 2);
+      std::vector<MPI_Request> local_request;
+      if (t0 == 0) {
+        local_request.resize(local_request.size() + 2);
 
-      pid_recv =
-          1 * threads_per_dim * threads_per_dim + t1 * threads_per_dim + t2;
+        pid_recv =
+            0 * threads_per_dim * threads_per_dim + t1 * threads_per_dim + t2;
 
-      pid_send =
-          0 * threads_per_dim * threads_per_dim + t1 * threads_per_dim + t2;
-    }
-    if (t1 == 0) {
-    }
-    if (t1 == p - 1) {
-    }
-    if (t2 == 0) {
-    }
-    if (t2 == p - 1) {
-    }
-    // uncomment when you complete question 2
-    // MPI_Waitall(local_request.size(),
-    // local_request.data(),MPI_STATUSES_IGNORE);
+        pid_send =
+            1 * threads_per_dim * threads_per_dim + t1 * threads_per_dim + t2;
 
+
+        MPI_Irecv(unpack[pid_recv], nloc * nloc, MPI_DOUBLE, rank_minus[0], pid_recv, cart_comm, &local_request[0]);
+        MPI_Isend(  pack[pid_send], nloc * nloc, MPI_DOUBLE, rank_plus [0], pid_send, cart_comm, &local_request[1]);
+      }
+      if (t0 == p - 1) {
+        local_request.resize(local_request.size() + 2);
+
+        pid_recv =
+            1 * threads_per_dim * threads_per_dim + t1 * threads_per_dim + t2;
+
+        pid_send =
+            0 * threads_per_dim * threads_per_dim + t1 * threads_per_dim + t2;
+
+        MPI_Irecv(unpack[pid_recv], nloc * nloc, MPI_DOUBLE, rank_plus [0], pid_recv, cart_comm, &local_request[0]);
+        MPI_Isend(  pack[pid_send], nloc * nloc, MPI_DOUBLE, rank_minus[0], pid_send, cart_comm, &local_request[1]);
+      }
+      if (t1 == 0) {
+        local_request.resize(local_request.size() + 2);
+
+        pid_recv =
+            2 * threads_per_dim * threads_per_dim + t0 * threads_per_dim + t2;
+
+        pid_send =
+            3 * threads_per_dim * threads_per_dim + t0 * threads_per_dim + t2;
+
+
+        MPI_Irecv(unpack[pid_recv], nloc * nloc, MPI_DOUBLE, rank_minus[1], pid_recv, cart_comm, &local_request[0]);
+        MPI_Isend(  pack[pid_send], nloc * nloc, MPI_DOUBLE, rank_plus [1], pid_send, cart_comm, &local_request[1]);
+      }
+      if (t1 == p - 1) {
+        local_request.resize(local_request.size() + 2);
+
+        pid_recv =
+            3 * threads_per_dim * threads_per_dim + t0 * threads_per_dim + t2;
+
+        pid_send =
+            2 * threads_per_dim * threads_per_dim + t0 * threads_per_dim + t2;
+
+
+        MPI_Irecv(unpack[pid_recv], nloc * nloc, MPI_DOUBLE, rank_plus [1], pid_recv, cart_comm, &local_request[0]);
+        MPI_Isend(  pack[pid_send], nloc * nloc, MPI_DOUBLE, rank_minus[1], pid_send, cart_comm, &local_request[1]);
+      }
+      if (t2 == 0) {
+        local_request.resize(local_request.size() + 2);
+
+        pid_recv =
+            4 * threads_per_dim * threads_per_dim + t0 * threads_per_dim + t1;
+
+        pid_send =
+            5 * threads_per_dim * threads_per_dim + t0 * threads_per_dim + t1;
+
+
+        MPI_Irecv(unpack[pid_recv], nloc * nloc, MPI_DOUBLE, rank_minus[2], pid_recv, cart_comm, &local_request[0]);
+        MPI_Isend(  pack[pid_send], nloc * nloc, MPI_DOUBLE, rank_plus [2], pid_send, cart_comm, &local_request[1]);
+      }
+      if (t2 == p - 1) {
+        local_request.resize(local_request.size() + 2);
+
+        pid_recv =
+            5 * threads_per_dim * threads_per_dim + t0 * threads_per_dim + t1;
+
+        pid_send =
+            4 * threads_per_dim * threads_per_dim + t0 * threads_per_dim + t1;
+
+
+        MPI_Irecv(unpack[pid_recv], nloc * nloc, MPI_DOUBLE, rank_plus [2], pid_recv, cart_comm, &local_request[0]);
+        MPI_Isend(  pack[pid_send], nloc * nloc, MPI_DOUBLE, rank_minus[2], pid_send, cart_comm, &local_request[1]);
+      }
+
+//      std::cerr << "thread_num: " << tid << " request length: " << local_request.size() << std::endl;
+
+      // uncomment when you complete question 2
+       MPI_Waitall(local_request.size(), local_request.data(),MPI_STATUSES_IGNORE);
+
+       unpack_all();
+    }
     // ********************************************************************************
     // Question 4: Some computation can be carried out before waiting for
     // communication to finish
     // ********************************************************************************
 
-    // Remove these when you complete question 2
-    MPI_Request request[12];
-    MPI_Irecv(unpack[0], N * N, MPI_DOUBLE, rank_minus[0], 100, cart_comm,&request[0]);
-    MPI_Isend(  pack[0], N * N, MPI_DOUBLE, rank_plus [0], 100, cart_comm,&request[1]);
-
-    MPI_Irecv(unpack[1], N * N, MPI_DOUBLE, rank_plus [0], 101, cart_comm,&request[2]);
-    MPI_Isend(  pack[1], N * N, MPI_DOUBLE, rank_minus[0], 101, cart_comm,&request[3]);
-
-    MPI_Irecv(unpack[2], N * N, MPI_DOUBLE, rank_minus[1], 200, cart_comm,&request[4]);
-    MPI_Isend(  pack[2], N * N, MPI_DOUBLE, rank_plus [1], 200, cart_comm,&request[5]);
-
-    MPI_Irecv(unpack[3], N * N, MPI_DOUBLE, rank_plus [1], 201, cart_comm,&request[6]);
-    MPI_Isend(  pack[3], N * N, MPI_DOUBLE, rank_minus[1], 201, cart_comm,&request[7]);
-
-    MPI_Irecv(unpack[4], N * N, MPI_DOUBLE, rank_minus[2], 300, cart_comm,&request[8]);
-    MPI_Isend(  pack[4], N * N, MPI_DOUBLE, rank_plus [2], 300, cart_comm,&request[9]);
-
-    MPI_Irecv(unpack[5], N * N, MPI_DOUBLE, rank_plus [2], 301, cart_comm,&request[10]);
-    MPI_Isend(  pack[5], N * N, MPI_DOUBLE, rank_minus[2], 301, cart_comm,&request[11]);
-
-    // Remove this when you complete question 2
-    MPI_Waitall(12, &request[0], MPI_STATUSES_IGNORE);
-
-    unpack_all();
 
     // ********************************************************************************
     // Question 1: parallelize this loop with OPENMP, similarly to the loop
