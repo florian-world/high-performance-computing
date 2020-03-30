@@ -181,7 +181,7 @@ void WaveEquation::run(double t_end) {
   do {
 
     // Question 4: a pragma omp master might make screen output better
-    if (count % 10 == 0) {
+    if (count % 100 == 0) {
       if (rank == 0)
         std::cout << count << " t=" << t << "\n";
       // Print(count); //saving data really slows down the code
@@ -268,16 +268,25 @@ void WaveEquation::run(double t_end) {
     // found in
     //             auxiliary.cpp in the WaveEquation struct constructor.
     // ********************************************************************************
-    int i0_min = 0;
-    int i1_min = 0;
-    int i2_min = 0;
-    int i0_max = N;
-    int i1_max = N;
-    int i2_max = N;
-    for (int i0 = 1 + i0_min; i0 < i0_max + 1; i0++)
-      for (int i1 = 1 + i1_min; i1 < i1_max + 1; i1++)
-        for (int i2 = 1 + i2_min; i2 < i2_max + 1; i2++)
-          UpdateGridPoint(i0, i1, i2);
+#pragma omp parallel
+    {
+      int tid = omp_get_thread_num();
+      int ti0, ti1, ti2;
+      thread_coordinates(tid, threads_per_dim, ti0, ti1, ti2);
+
+      int nloc = N / threads_per_dim;
+
+      int i0_min = ti0 * nloc;
+      int i1_min = ti1 * nloc;
+      int i2_min = ti2 * nloc;
+      int i0_max = i0_min + nloc;
+      int i1_max = i1_min + nloc;
+      int i2_max = i2_min + nloc;
+      for (int i0 = 1 + i0_min; i0 < i0_max + 1; i0++)
+        for (int i1 = 1 + i1_min; i1 < i1_max + 1; i1++)
+          for (int i2 = 1 + i2_min; i2 < i2_max + 1; i2++)
+            UpdateGridPoint(i0, i1, i2);
+    }
     // ********************************************************************************
 
     // ********************************************************************************
