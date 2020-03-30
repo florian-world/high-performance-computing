@@ -253,10 +253,7 @@ void WaveEquation::run(double t_end) {
         MPI_Isend(  pack[pid_send], nloc * nloc, MPI_DOUBLE, rank_minus[2], pid_send, cart_comm, &local_request[local_request.size()-1]);
       }
 
-      // uncomment when you complete question 2
-      MPI_Waitall(local_request.size(), local_request.data(),MPI_STATUSES_IGNORE);
 
-      unpack_all();
       // ********************************************************************************
       // Question 4: Some computation can be carried out before waiting for
       // communication to finish
@@ -275,10 +272,32 @@ void WaveEquation::run(double t_end) {
       int i0_max = i0_min + nloc;
       int i1_max = i1_min + nloc;
       int i2_max = i2_min + nloc;
-      for (int i0 = 1 + i0_min; i0 < i0_max + 1; i0++)
-        for (int i1 = 1 + i1_min; i1 < i1_max + 1; i1++)
-          for (int i2 = 1 + i2_min; i2 < i2_max + 1; i2++)
+      for (int i0 = 2 + i0_min; i0 < i0_max; i0++)
+        for (int i1 = 2 + i1_min; i1 < i1_max; i1++)
+          for (int i2 = 2 + i2_min; i2 < i2_max; i2++)
             UpdateGridPoint(i0, i1, i2);
+
+
+      MPI_Waitall(local_request.size(), local_request.data(),MPI_STATUSES_IGNORE);
+      unpack_all();
+
+      for (int i1 = 1 + i1_min; i1 < i1_max + 1; i1++)
+        for (int i2 = 1 + i2_min; i2 < i2_max + 1; i2++) {
+          UpdateGridPoint(1+i0_min, i1, i2);
+          UpdateGridPoint(i0_max, i1, i2);
+        }
+
+      for (int i0 = 2 + i0_min; i0 < i0_max; i0++)
+        for (int i2 = 1 + i2_min; i2 < i2_max + 1; i2++) {
+          UpdateGridPoint(i0, 1+i1_min, i2);
+          UpdateGridPoint(i0, i1_max, i2);
+        }
+
+      for (int i0 = 2 + i0_min; i0 < i0_max; i0++)
+        for (int i1 = 2 + i1_min; i1 < i1_max; i1++) {
+          UpdateGridPoint(i0, i1, 1+i2_min);
+          UpdateGridPoint(i0, i1, i2_max);
+        }
 
       // ********************************************************************************
 
