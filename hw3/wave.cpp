@@ -150,24 +150,26 @@ void WaveEquation::run(double t_end) {
   // Question 3: The parallel region should start outside the 'while' loop.
   // ********************************************************************************
 
-  do {
-
-    // Question 4: a pragma omp master might make screen output better
-    if (count % 100 == 0) {
-      if (rank == 0)
-        std::cout << count << " t=" << t << "\n";
-      // Print(count); //saving data really slows down the code
-    }
-
-
-    // ********************************************************************************
-    // Question 2: multiple threads send and receive messages, according to their
-    //             thread id and 'thread coordinates' (t0,t1,t2).
-    //             Be careful to correctly match the message tags pid_send and
-    //             pid_recv that also correspond to the pack/unpack arrays.
-    // ********************************************************************************
 #pragma omp parallel
-    {
+  {
+    do {
+      // Question 4: a pragma omp master might make screen output better
+      #pragma omp master
+      {
+        if (count % 10 == 0) {
+          if (rank == 0)
+            std::cout << count << " t=" << t << std::endl;
+          // Print(count); //saving data really slows down the code
+        }
+      }
+
+
+      // ********************************************************************************
+      // Question 2: multiple threads send and receive messages, according to their
+      //             thread id and 'thread coordinates' (t0,t1,t2).
+      //             Be careful to correctly match the message tags pid_send and
+      //             pid_recv that also correspond to the pack/unpack arrays.
+      // ********************************************************************************
       // call pack_all inside the parallel region (easier refactoring later)
       pack_all();
       int nloc = N / threads_per_dim;
@@ -185,8 +187,6 @@ void WaveEquation::run(double t_end) {
 
         pid_send =
             1 * threads_per_dim * threads_per_dim + t1 * threads_per_dim + t2;
-
-        assert(pid_recv == tid);
 
         MPI_Irecv(unpack[pid_recv], nloc * nloc, MPI_DOUBLE, rank_minus[0], pid_recv, cart_comm, &local_request[local_request.size()-2]);
         MPI_Isend(  pack[pid_send], nloc * nloc, MPI_DOUBLE, rank_plus [0], pid_send, cart_comm, &local_request[local_request.size()-1]);
@@ -254,32 +254,24 @@ void WaveEquation::run(double t_end) {
       }
 
       // uncomment when you complete question 2
-       MPI_Waitall(local_request.size(), local_request.data(),MPI_STATUSES_IGNORE);
+      MPI_Waitall(local_request.size(), local_request.data(),MPI_STATUSES_IGNORE);
 
-       unpack_all();
-    }
-    // ********************************************************************************
-    // Question 4: Some computation can be carried out before waiting for
-    // communication to finish
-    // ********************************************************************************
+      unpack_all();
+      // ********************************************************************************
+      // Question 4: Some computation can be carried out before waiting for
+      // communication to finish
+      // ********************************************************************************
 
 
-    // ********************************************************************************
-    // Question 1: parallelize this loop with OPENMP, similarly to the loop
-    // found in
-    //             auxiliary.cpp in the WaveEquation struct constructor.
-    // ********************************************************************************
-#pragma omp parallel
-    {
-      int tid = omp_get_thread_num();
-      int ti0, ti1, ti2;
-      thread_coordinates(tid, threads_per_dim, ti0, ti1, ti2);
+      // ********************************************************************************
+      // Question 1: parallelize this loop with OPENMP, similarly to the loop
+      // found in
+      //             auxiliary.cpp in the WaveEquation struct constructor.
+      // ********************************************************************************
 
-      int nloc = N / threads_per_dim;
-
-      int i0_min = ti0 * nloc;
-      int i1_min = ti1 * nloc;
-      int i2_min = ti2 * nloc;
+      int i0_min = t0 * nloc;
+      int i1_min = t1 * nloc;
+      int i2_min = t2 * nloc;
       int i0_max = i0_min + nloc;
       int i1_max = i1_min + nloc;
       int i2_max = i2_min + nloc;
@@ -287,20 +279,26 @@ void WaveEquation::run(double t_end) {
         for (int i1 = 1 + i1_min; i1 < i1_max + 1; i1++)
           for (int i2 = 1 + i2_min; i2 < i2_max + 1; i2++)
             UpdateGridPoint(i0, i1, i2);
-    }
-    // ********************************************************************************
 
-    // ********************************************************************************
-    // Question 3: You will need to add the following barrier (why?)
-    // ********************************************************************************
-    //#pragma omp barrier
+      // ********************************************************************************
 
-    std::swap(u_new, u);
-    std::swap(u_new, u_old);
-    t += dt;
-    count++;
+      // ********************************************************************************
+      // Question 3: You will need to add the following barrier (why?)
+      // ********************************************************************************
+      #pragma omp barrier // to make sure all calculation is done before it's swapped
 
-  } while (t < t_end);
+      #pragma omp single
+      {
+        std::swap(u_new, u);
+        std::swap(u_new, u_old);
+        t += dt;
+        count++;
+      }
+
+      // implicit barrier is important here to get the exit criteria right (!) [e.g. omp master does not have one]
+
+    } while (t < t_end);
+  }
 
   MPI_Barrier(cart_comm);
   total_time = MPI_Wtime() - time_start;
