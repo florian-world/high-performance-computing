@@ -155,10 +155,10 @@ void SSA_CPU::operator()()
         // TODO: Task 1a) (STEP 3)
         //          - increment Sa, Sb
 
-        const double d1 = beta < a[0];
-        const double d2 = beta >= a[0] && beta < a[1];
-        const double d3 = beta >= a[1] && beta < a[2];
-        const double d4 = beta >= a[2];
+        const double d1 = reaction < a[0];
+        const double d2 = reaction >= a[0] && reaction < a[1];
+        const double d3 = reaction >= a[1] && reaction < a[2];
+        const double d4 = reaction >= a[2];
 
         Sa += -d1 + d3;
         Sb += -d2 -d3 +d4;
