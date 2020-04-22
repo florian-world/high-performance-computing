@@ -125,26 +125,43 @@ void SSA_CPU::operator()()
         //          - compute propensities a[0], a[1], .., a[3] and a0
         //          - use values Sa and Sb, and values stored in k[4], check initialization in SSA_CPU.hpp
 
-        a[0] = 0.0;
-        a[1] = 0.0;
-        a[2] = 0.0;
-        a[3] = 0.0;
+        a[0] = k[0] * Sa;
+        a[1] = k[1] * Sb;
+        a[2] = k[2] * Sa * Sb;
+        a[3] = k[3];                                            // 4 FLOP
 
-        double a0 = 0.0;
+        // compute cumulative sum
+        for (int i = 1; i < m; ++i)
+          a[i] += a[i-1];                                       // 3 FLOP
+
+        // a0 simply last a[i]:
+        const double& a0 = a[m-1];
 
         // TODO: Task 1a) (STEP 1)
         //          - sample tau using the inverse sampling method and increment time, use uniform random numbers initialized in r48
 
-        time += 0.1; // 0.1 is a dummy
+        const double& r1 = r48[2*s*niters + iter*2];
+        const double& r2 = r48[2*s*niters + iter*2 + 1];
+
+        // tau ~ exp(a_0), so the rate of the exponential distribution is a_0
+
+        time -= log1p(-r1) / a0;
 
         // TODO: Task 1a) (STEP 2)
         //          - sample a reaction, use uniform random numbers initialized in r48
 
+        double reaction = a0 * r2;
+
         // TODO: Task 1a) (STEP 3)
         //          - increment Sa, Sb
 
-        Sa += 0;
-        Sb += 0;
+        const double d1 = beta < a[0];
+        const double d2 = beta >= a[0] && beta < a[1];
+        const double d3 = beta >= a[1] && beta < a[2];
+        const double d4 = beta >= a[2];
+
+        Sa += -d1 + d3;
+        Sb += -d2 -d3 +d4;
 
         iter++;
       }
