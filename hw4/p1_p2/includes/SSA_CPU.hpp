@@ -22,14 +22,15 @@ protected:
   int pass;
 
 public:
-  SSA_CPU(const int omega, const int num_samples, const double T, const double bin_dt)
+  SSA_CPU(const int omega, const int num_samples, const double T, const double bin_dt,
+          double k1 = 1.0, double k2 = 1.0, double k3 = 0.2, double k4 = 20.0)
     : SSABase(omega,num_samples,T,bin_dt)
     ,pass(0)
   {
-    k[0] = 1;
-    k[1] = 1;
-    k[2] = 0.2/omega;
-    k[3] = 20.0*omega;
+    k[0] = k1;
+    k[1] = k2;
+    k[2] = k3/omega;
+    k[3] = k4*omega;
   }
 
   void operator()();
