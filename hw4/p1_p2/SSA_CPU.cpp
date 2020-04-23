@@ -74,9 +74,11 @@ void SSA_CPU::operator()()
       {
         trajS1L[t*nbins+b] = 0.0;
         trajS2L[t*nbins+b] = 0.0;
-        ntrajL[t*nbins+b] = 0;
+        ntrajL[t*nbins+b] = 0;                                    
       }
     }
+
+    // printf("num_threads = %d, nbins = %d, numSamples = %d\n", num_threads, nbins, numSamples);
 
 #ifdef _OPENMP
     #pragma omp parallel for
@@ -121,7 +123,7 @@ void SSA_CPU::operator()()
         trajS2L[ib+thread_no*nbins] += Sb;                      // 2 FLOP, 2 WRITE
         ++ntrajL[ib+thread_no*nbins];                           // 1 WRITE
 
-        // TODO: Task 1a) (STEP 0)
+        // TODO: Task 1a) (STEP 0) 
         //          - compute propensities a[0], a[1], .., a[3] and a0
         //          - use values Sa and Sb, and values stored in k[4], check initialization in SSA_CPU.hpp
 
@@ -141,28 +143,28 @@ void SSA_CPU::operator()()
         //          - sample tau using the inverse sampling method and increment time, use uniform random numbers initialized in r48
 
         const double& r1 = r48[2*s*niters + iter*2];
-        const double& r2 = r48[2*s*niters + iter*2 + 1];
+        const double& r2 = r48[2*s*niters + iter*2 + 1];        // 2 READ
 
         // tau ~ exp(a_0), so the rate of the exponential distribution is a_0
 
-        time -= log1p(-r1) / a0;
+        time -= log1p(-r1) / a0;                                // 4 FLOP, considering: time - tau, 1-r1, log(), /a0
 
         // TODO: Task 1a) (STEP 2)
         //          - sample a reaction, use uniform random numbers initialized in r48
 
-        double reaction = a0 * r2;
+        double reaction = a0 * r2;                              // 1 FLOP
 
         // TODO: Task 1a) (STEP 3)
         //          - increment Sa, Sb
 
-        const double d1 = reaction < a[0];
-        const double d2 = reaction >= a[0] && reaction < a[1];
-        const double d3 = reaction >= a[1] && reaction < a[2];
-        const double d4 = reaction >= a[2];
+        // remind that a[i] contains the cmulative sum
+        const bool react1 = reaction < a[0];
+        const bool react2 = reaction >= a[0] && reaction < a[1];
+        const bool react3 = reaction >= a[1] && reaction < a[2];
+        const bool react4 = reaction >= a[2];
 
-        Sa += -d1 + d3;
-        Sb += -d2 -d3 +d4;
-
+        Sa += -react1 + react3;
+        Sb += -react2 -react3 +react4;                          // 5  FLOP
         iter++;
       }
 
@@ -210,21 +212,57 @@ void SSA_CPU::normalize_bins()
   for(int i=0; i < nbins; ++i)
   {
     trajS1[i]/=ntraj[i];
-    trajS2[i]/=ntraj[i];                                        // 2 FLOP, 3 READ, 2 WRITE
+    trajS2[i]/=ntraj[i];                                        // 2 FLOP, 3 READ, 2 WRITE ---> NOTE: do not count this, not inside while(bNotDone)
   }
 }
-
+  
 double SSA_CPU::getTransfers() const
 {
   // TODO: (Optional) Task 1c)
   //          - return number of read writes in [BYTES]
 
-  return 1.0;
+#ifdef _OPENMP
+  int num_threads;
+  #pragma omp parallel
+  #pragma omp single
+  {
+    num_threads = omp_get_num_threads();
+  }
+#else
+  const int num_threads = 1;
+#endif
+
+  const int num_iter = std::accumulate(ntraj.begin(), ntraj.end(), 0); // already accounts for *numSamples
+  const int& num_bins = ntraj.size();
+
+  const int transfers_per_iter = 2*sizeof(double); // READ random
+
+  const int transfers_per_bin_and_thread = (2+2)*sizeof(double) + (1+1)*sizeof(int); // 3 reads of trajS1[i], trajS2[i] and ntraj[i] + 3 writes
+
+  return num_threads * num_bins * transfers_per_bin_and_thread + num_iter * transfers_per_iter;
 }
 
 double SSA_CPU::getFlops() const
 {
+  const int num_iter = std::accumulate(ntraj.begin(), ntraj.end(), 0); // already accounts for *numSamples
+  const int& num_bins = ntraj.size();
+  
+#ifdef _OPENMP
+  int num_threads;
+  #pragma omp parallel
+  #pragma omp single
+  {
+    num_threads = omp_get_num_threads();
+  }
+#else
+  const int num_threads = 1;
+#endif
+
+
+  const int flops_per_iter = 20; // summing the flops inside while(... iter<niters)
+  const int flops_per_bin_and_thread = 3; // summing up bins, normalization outside while loop  
+  
   // TODO: (Optional) Task 1c)
   //          - return number of floating point operations
-  return 1.0;
+  return num_iter * flops_per_iter + flops_per_bin_and_thread * num_bins * num_threads;
 }
