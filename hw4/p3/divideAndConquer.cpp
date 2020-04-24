@@ -46,7 +46,6 @@ int main(int argc, char* argv[])
 
     upcxx::broadcast(&factorArray, 1, 0).wait(); // broadcast 1 array from rank 0
 
-
     // TODO: After broadcasting the array, each rank needs to compute the portion of the factors it is assigned, and then \textbf{place} the result back to the \texttt{factorArray}. Do not use RPCs in this question, use the \texttt{upcxx::rput} command.
     upcxx::future<> fut_all = upcxx::make_future();
 
@@ -54,19 +53,19 @@ int main(int argc, char* argv[])
     int idxStart = 1 + rankId * numLocal;
     int idxStop = idxStart + numLocal;
 
+    // printf("In rank %d computiong from %d to %d\n", numLocal, idxStart, idxStop);
+
     double localFactor = 0.0;
 
     for(int k = idxStart; k < idxStop; ++k){
         localFactor += FACTOR(k);
     }
 
-
     auto future = upcxx::rput(&localFactor, factorArray + rankId, 1);
 
     fut_all = upcxx::when_all(fut_all, future);
 
     fut_all.wait(); // take time when all futures are done
-
 
     auto end = std::chrono::system_clock::now();
     double rankTime = std::chrono::duration<double>(end-start).count();
@@ -93,6 +92,8 @@ int main(int argc, char* argv[])
         for (int i = 0; i < rankCount; ++i) {
             pi_approx += localArray[i];
         }
+
+        pi_approx = 4 * pi_approx;
 
         // Reporting the result
         printf("PI approximate: %.17g\n", pi_approx);

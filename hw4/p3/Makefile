@@ -14,4 +14,4 @@ producerConsumer: producerConsumer.cpp factor.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 
-clean:; rm -rf *.o
+clean:; rm -rf *.o sequential divideAndConquer producerConsumer
