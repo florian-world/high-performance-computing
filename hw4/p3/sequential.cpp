@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <chrono>
 #include <math.h>
+#include <vector>
 
 // Library of the factor F(n)
 #include "factor.h"
@@ -26,12 +27,19 @@ int main(int argc, char* argv[])
     // Measuring the total time needed.
     auto start = std::chrono::system_clock::now();
 
+    std::vector<double> factors(NUM_FACTORS);
+
+    for(int k=1; k<=NUM_FACTORS; ++k){
+        factors[k-1] = FACTOR(k);
+    }
+
+    auto end = std::chrono::system_clock::now();
+
     double pi_approx = 0.0;
     for(int k=1; k<=NUM_FACTORS; ++k){
-        pi_approx += FACTOR(k);
+        pi_approx += factors[k-1];
     }
     pi_approx = 4. * pi_approx;
-    auto end = std::chrono::system_clock::now();
 
     printf("PI approximate: %.17g\n", pi_approx);
     printf("PI: %.17g\n", M_PI);
