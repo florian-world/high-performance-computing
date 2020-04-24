@@ -48,8 +48,9 @@ int main(int argc, char* argv[])
     // factorArray is now initialized as a global array. (please see some lines above)
     // TODO: Similarly to the divide and conquer strategy, the master needs to initialize the array with the upcxx::new_array<double> command. Then the array needs to be broadcasted so that all ranks have access and point to the shared address space.
 
+    if (rankId == 0) factorArray = upcxx::new_array<double>(NUM_FACTORS);
 
-
+    upcxx::broadcast(&factorArray, 1, 0).wait(); // broadcast 1 array from rank 0
 
 
     if (rankId == 0) master(rankCount);
@@ -62,7 +63,13 @@ int main(int argc, char* argv[])
 
         double pi_approx = 0.0;
 
+        auto localArray = factorArray.local();
 
+        for (int i = 0; i < NUM_FACTORS; ++i) {
+            pi_approx += localArray[i];
+        }
+
+        pi_approx = 4 * pi_approx;
 
 
 
@@ -105,14 +112,15 @@ void workerComputeFactor(int rankId, int factorId)
 {
     // TODO: Compute factor
 
-
-    // TODO: As a worker, use a RPC to update the master's factorArray with the computed factor, and notify the master that you are again available to compute by pushing your rankId to the queue 
-
+    double f = FACTOR(factorId+1);
 
 
+    // TODO: As a worker, use a RPC to update the master's factorArray with the computed factor, and notify the master that you are again available to compute by pushing your rankId to the queue
 
-
-
+    upcxx::rpc_ff(0, [](double factor, int r, int fid) {
+        factorArray.local()[fid] = factor;
+        workers.push(r);
+    }, f, rankId, factorId);
 }
 
 void master(int rankCount)
@@ -128,8 +136,11 @@ void master(int rankCount)
         while(workers.empty()) upcxx::progress();
         //TODO: Whenever any worker is available, the master has to get his \texttt{workerId}, by popping out the first \texttt{workerId} from the queue of the available workers.
 
+        int receiver = workers.front(); workers.pop();
+
         // TODO: After identifying an available worker, the master needs to send an RPC, the task that the consumer has to complete. This is no other than the workerComputeFactor(workerId, factorId)
 
+        upcxx::rpc_ff(receiver, &workerComputeFactor, receiver, factorId);
     }
     // Master is notifying the workers to stop the evaluation of factors
     for (int i = 1; i < rankCount; i++) upcxx::rpc_ff(i, [](){continueFactorEvaluations = false;});
