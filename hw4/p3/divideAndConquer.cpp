@@ -80,6 +80,8 @@ int main(int argc, char* argv[])
 
     // TODO ?:
 
+    upcxx::barrier();
+
 
     // TODO: Finally, rank zero needs to compute the approximate value $\tilde{\pi}$ and save it to the results file, along with the total time. \textbf{Downcast} the global pointer to a local one and use it to compute the final approximation.
     if (rankId == 0)
