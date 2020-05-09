@@ -44,7 +44,12 @@ void subtask_b() {
     for (int K : kBufferSizes) {
         // TODO: Measure the execution time of synchronously uploading K doubles from the host to the device. Report GB/s
 
-        double gbps = 0.0; // Gigabytes per second here;
+        double dt = benchmark(pickN(K), [aDev, aHost, K](){
+            cudaMemcpy(aDev, aHost, K * sizeof(double), cudaMemcpyHostToDevice);
+        });
+
+        double gbps = K*sizeof(double) / dt / 1e9; // Gigabytes per second here;
+        // printf("upload K=%8d, averged over %8d runs --> %5.2f GB/s\n", K, pickN(K), gbps);
         printf("upload K=%8d --> %5.2f GB/s\n", K, gbps);
     }
 
