@@ -28,7 +28,7 @@ double benchmark(int N, Func func) {
 
     double ns = (double)std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
 
-    dt = ns / N * 10e-9;
+    dt = ns / N * 1e-9;
 
     return dt;
 }
