@@ -29,12 +29,11 @@ void subtask_b() {
     // For example,
     //      CUDA_CHECK(cudaMalloc(...));
     // CUDA_CHECK(cudaCmd) check whether `cudaCmd` completed successfully.
-
-
-    // TODO: Delete this once done with allocation.
-    printf("Implement allocation first.\n");
-    return;
-
+    CUDA_CHECK(cudaMalloc(&aDev, maxK * sizeof(double)));
+    CUDA_CHECK(cudaMalloc(&bDev, maxK * sizeof(double)));
+    CUDA_CHECK(cudaMalloc(&pDev, maxK * sizeof(int)));
+    CUDA_CHECK(cudaMallocHost(&aHost, maxK * sizeof(double)));
+    CUDA_CHECK(cudaMallocHost(&pHost, maxK * sizeof(int)));
 
     // Set aDev, bDev and aHost to 0.0 (not really that important).
     CUDA_CHECK(cudaMemset(aDev, 0, maxK * sizeof(double)));
@@ -115,6 +114,12 @@ void subtask_b() {
 
 
     // TODO: Free all host and all device buffers.
+
+    cudaFree(aDev);
+    cudaFree(bDev);
+    cudaFree(pDev);
+    cudaFreeHost(aHost);
+    cudaFreeHost(pHost);
 }
 
 int main() {
