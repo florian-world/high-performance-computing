@@ -11,6 +11,25 @@ double benchmark(int N, Func func) {
     // TODO: (OPTIONAL) Implement the measurement procedure
     // here and use this function for all your measurements.
 
+    int warmup = 1 + N / 10;
+    for (int i = 0; i < warmup; ++i) {
+        func();
+    }
+    cudaDeviceSynchronize();
+
+    auto t0 = std::chrono::steady_clock::now();
+
+    for (int i = 0; i < N; ++i)
+        func();
+
+    cudaDeviceSynchronize();
+
+    auto t1 = std::chrono::steady_clock::now();
+
+    double ns = (double)std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
+
+    dt = ns / N * 10e-9;
+
     return dt;
 }
 
