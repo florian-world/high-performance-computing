@@ -8,20 +8,63 @@
 __global__ void jacobiStepKernel(int N, double hh, double invhh,
                                  const double *rho, const double *phik, double *phik1) {
     // TODO: Task 3b) Compute phik1[iy * N + ix]. Don't forget about 0 boundary conditions!
+    int ix = blockIdx.x * blockDim.x + threadIdx.x;
+    int iy = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (ix >= N || iy >= N)
+        return;
+
+    double left = ix > 1 ? phik[iy*N+ix-1] : 0.0;
+    double right = ix < N-1 ? phik[iy*N+ix+1] : 0.0;
+    double up = iy < N-1 ? phik[(iy+1)*N+ix] : 0.0;
+    double down = iy > 1 ? phik[(iy-1)*N+ix] : 0.0;
+
+    phik1[iy*N+ix] = hh/4 * (rho[iy*N+ix] + invhh * (left + right + up + down));
 }
 
 void jacobiStep(int N, double h, const double *rhoDev, const double *phikDev, double *phik1Dev) {
     /// TODO: Task 3b) Invoke the kernel jacobiSetKernel. Consider using dim3 as number
     /// of blocks and number of threads!
+    dim3 threads(32, 32, 1);
+    dim3 blocks((N + threads.x - 1) / threads.x, (N + threads.y - 1) / threads.y, 1);
+    jacobiStepKernel<<<blocks, threads>>>(N, h*h, 1/(h*h), rhoDev, phikDev, phik1Dev);
 }
 
 
 __global__ void computeAphiKernel(int N, double invhh, const double *phi, double *Aphi) {
     // TODO: Task 3d) Compute Aphi[iy * N + ix]. Don't forget about 0 boundary conditions!
+
+    int ix = blockIdx.x * blockDim.x + threadIdx.x;
+    int iy = blockIdx.y * blockDim.y + threadIdx.y;
+
+    if (ix >= N || iy >= N)
+        return;
+
+    // // @see https://piazza.com/class/k5xzja5nrlb73t?cid=58
+    // if (ix == N-1 || ix == 0 || iy == N-1 || iy == 0) {
+    //     Aphi[iy*N+ix] = 0.0;
+    //     return;
+    // }
+
+    double sum = 0.0;
+
+    sum += - 4 * invhh * phi[iy*N+ix]; // diagonal case
+
+    double left = ix > 1 ? phi[iy*N+ix-1] : 0.0;
+    double right = ix < N-1 ? phi[iy*N+ix+1] : 0.0;
+    double up = iy < N-1 ? phi[(iy+1)*N+ix] : 0.0;
+    double down = iy > 1 ? phi[(iy-1)*N+ix] : 0.0;
+
+    sum += invhh * (left + right + up + down);
+
+    Aphi[iy*N+ix] = sum;
 }
 
 void computeAphi(int N, double h, const double *xDev, double *AphiDev) {
     /// TODO: Task 3d) Invoke the kernel `computeAphiKernel`.
+    dim3 threads(32, 32, 1);
+    dim3 blocks((N + threads.x - 1) / threads.x, (N + threads.y - 1) / threads.y, 1);
+    computeAphiKernel<<<blocks, threads>>>(N, 1/(h*h), xDev, AphiDev);
 }
 
 // Print L1 and L2 error. Do not edit!
@@ -71,13 +114,17 @@ int main() {
     double *phikDev;
     double *phik1Dev;
     double *rhoHost;
+    double *AphiDev;
+    double *AphiHost;
 
     // TODO: Task 3b) Allocate buffers of N^2 doubles.
     //                (You might need additional temporary buffers to complete all tasks.)
     CUDA_CHECK(cudaMalloc(&rhoDev, N*N*sizeof(double)));
     CUDA_CHECK(cudaMalloc(&phikDev, N*N*sizeof(double)));
     CUDA_CHECK(cudaMalloc(&phik1Dev, N*N*sizeof(double)));
+    CUDA_CHECK(cudaMalloc(&AphiDev, N*N*sizeof(double)));
     CUDA_CHECK(cudaMallocHost(&rhoHost, N*N*sizeof(double)));
+    CUDA_CHECK(cudaMallocHost(&AphiHost, N*N*sizeof(double)));
 
 
     // RHS with three non-zero elements at (x, y)=(0.3, 0.1), (0.4, 0.1) and (0.5, 0.6).
@@ -98,7 +145,20 @@ int main() {
     // TODO: Task 3d) Call computeAphi, download the result and call printL1L2.
     //                Ensure that L1 and L2 drop over time.
     // TODO: (OPTIONAL) Download the vector phik1 (or phik) and call dumpCSV for visualization.
-    jacobiStep(N, h, rhoDev, phikDev, phik1Dev);
+
+    for (int i = 0; i < numIterations; ++i) {
+        if (i % 2 == 0)
+            jacobiStep(N, h, rhoDev, phikDev, phik1Dev);
+        else
+            jacobiStep(N, h, rhoDev, phik1Dev, phikDev);
+
+        // if numIterations is an even number, then the last iteration writes back to phikDev
+        if ((i+1) % 1000 == 0) {
+            jacobiStep(N, h, rhoDev, phik1Dev, AphiDev);
+            CUDA_CHECK(cudaMemcpy(AphiHost, AphiDev, N*N*sizeof(double), cudaMemcpyDeviceToHost));
+            printL1L2(i+1, N, AphiHost, rhoHost);
+        }
+    }
 
     // TODO: Task 3a) Deallocate buffers.
     cudaFree(rhoDev);
