@@ -74,10 +74,11 @@ int main() {
 
     // TODO: Task 3b) Allocate buffers of N^2 doubles.
     //                (You might need additional temporary buffers to complete all tasks.)
+    CUDA_CHECK(cudaMalloc(&rhoDev, N*N*sizeof(double)));
+    CUDA_CHECK(cudaMalloc(&phikDev, N*N*sizeof(double)));
+    CUDA_CHECK(cudaMalloc(&phik1Dev, N*N*sizeof(double)));
+    CUDA_CHECK(cudaMallocHost(&rhoHost, N*N*sizeof(double)));
 
-    // TODO: Task 3b) Remove this.
-    printf("Implement allocation first\n");
-    return;
 
     // RHS with three non-zero elements at (x, y)=(0.3, 0.1), (0.4, 0.1) and (0.5, 0.6).
     for (int i = 0; i < N * N; ++i)
@@ -87,8 +88,11 @@ int main() {
     rhoHost[(6 * N / 10) * N + (5 * N / 10)] = -2.0;
     // TODO: Task 3b) Upload rhoHost to rhoDev.
 
+    CUDA_CHECK(cudaMemcpy(rhoDev, rhoHost, N*N*sizeof(double), cudaMemcpyHostToDevice));
+
     // Initial guess x^(0)_i = 0.
     // TODO: Task 3b) Memset phikDev to 0.
+    CUDA_CHECK(cudaMemset(phikDev, 0, N*N*sizeof(double)));
 
     // TODO: Task 3c) Run the jacobiStep numIterations times.
     // TODO: Task 3d) Call computeAphi, download the result and call printL1L2.
@@ -97,4 +101,8 @@ int main() {
     jacobiStep(N, h, rhoDev, phikDev, phik1Dev);
 
     // TODO: Task 3a) Deallocate buffers.
+    cudaFree(rhoDev);
+    cudaFree(phikDev);
+    cudaFree(phik1Dev);
+    cudaFreeHost(rhoHost);
 }
