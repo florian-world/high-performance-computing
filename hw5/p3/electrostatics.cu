@@ -106,12 +106,13 @@ void dumpCSV(int N, const double *xHost, int iter) {
 
 int main() {
     const int N = 400;
-    const int numIterations = 50000;
+    const int numIterations = 500000;
     const double L = 1.0;
     const double h = L / N;
 
     double *rhoDev;
     double *phikDev;
+    double *phikHost;
     double *phik1Dev;
     double *rhoHost;
     double *AphiDev;
@@ -125,6 +126,7 @@ int main() {
     CUDA_CHECK(cudaMalloc(&AphiDev, N*N*sizeof(double)));
     CUDA_CHECK(cudaMallocHost(&rhoHost, N*N*sizeof(double)));
     CUDA_CHECK(cudaMallocHost(&AphiHost, N*N*sizeof(double)));
+    CUDA_CHECK(cudaMallocHost(&phikHost, N*N*sizeof(double)));
 
 
     // RHS with three non-zero elements at (x, y)=(0.3, 0.1), (0.4, 0.1) and (0.5, 0.6).
@@ -154,15 +156,22 @@ int main() {
 
         // if numIterations is an even number, then the last iteration writes back to phikDev
         if ((i+1) % 1000 == 0) {
-            jacobiStep(N, h, rhoDev, phik1Dev, AphiDev);
+            computeAphi(N, h, phikDev, AphiDev);
             CUDA_CHECK(cudaMemcpy(AphiHost, AphiDev, N*N*sizeof(double), cudaMemcpyDeviceToHost));
+            // CUDA_CHECK(cudaMemcpy(phikHost, phikDev, N*N*sizeof(double), cudaMemcpyDeviceToHost));
+            // dumpCSV(N, phikHost, i+1);
             printL1L2(i+1, N, AphiHost, rhoHost);
         }
     }
+
+
 
     // TODO: Task 3a) Deallocate buffers.
     cudaFree(rhoDev);
     cudaFree(phikDev);
     cudaFree(phik1Dev);
+    cudaFree(AphiDev);
     cudaFreeHost(rhoHost);
+    cudaFreeHost(AphiHost);
+    cudaFreeHost(phikHost);
 }
