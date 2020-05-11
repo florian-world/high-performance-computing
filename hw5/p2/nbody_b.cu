@@ -6,6 +6,7 @@ __global__ void computeForcesKernel(int N, const double3 *p, double3 *f) {
         return;
 
     // TODO: Copy the code from `nbody_a.cu` and fix the reduntant arithmetic operations.
+    
     double3 tmp{0.0, 0.0, 0.0};
     for (int i = 0; i < N; ++i) {
         double dx = p[i].x - p[idx].x;

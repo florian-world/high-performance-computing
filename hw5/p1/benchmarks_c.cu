@@ -100,7 +100,7 @@ void subtask_c() {
 
     // TODO: Experiment with number of threads per block, and number of blocks
     // (i.e. number of iterations per thread).
-    runCUDA(K, 1024, 128);
+    runCUDA(K, 8192, 1024);
 
     runOpenMP(K, 12);
 }
