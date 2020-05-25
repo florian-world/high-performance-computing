@@ -1,0 +1,7 @@
+*.d
+*.o
+*.orig
+*.swo
+*.swp
+build
+output.txt
