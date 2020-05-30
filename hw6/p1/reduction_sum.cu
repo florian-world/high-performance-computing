@@ -42,14 +42,48 @@ __device__ double sumBlock(double a) {
     return result;
 }
 
+__global__ void sumReduce(const double *aDev, double *bDev, int N) {
+    bDev[0] = 0.0f;
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    double a = idx < N ? aDev[idx] : 0.0;
+
+    double sum = sumBlock(a);
+
+    if (threadIdx.x == 0)
+        atomicAdd(bDev, sum);
+}
+
 /// Compute the sum of all values aDev[0]..aDev[N-1] for N <= 1024^2 and store the result to bDev[0].
 void sum1M(const double *aDev, double *bDev, int N) {
     assert(N <= 1024 * 1024);
+
+    printf("N = %d\n", N);
+
+    int numBlocks = (N+1024-1)/1024;
+
+    int device;
+    cudaDeviceProp prop;
+    cudaGetDevice(&device);
+    cudaGetDeviceProperties(&prop, device);
+    printf("Cuda compute capability: %d.%d\n", prop.major, prop.minor);
+    
+    // const int threadsPerBlock = prop.maxThreadsPerBlock;
+
+    if (numBlocks > prop.maxGridSize[0]) {
+        printf(
+            "Grid size <%d> exceeds the device capability <%d>", numBlocks, prop.maxGridSize[0]);
+    }
+
+    // bDev[0] = 0.0f;
+
+    CUDA_LAUNCH(sumReduce, numBlocks, 1024, aDev, bDev, N);
     // TODO: 1.d) Implement either this or `argMax1M`.
     //            Avoid copying any data back to the host.
     //            Hint: The solution requires more CUDA operations than just
     //            calling a single kernel. Feel free to use whatever you find
     //            necessary.
+
+
 }
 
 
