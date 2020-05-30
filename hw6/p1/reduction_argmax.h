@@ -1,6 +1,7 @@
 #include <algorithm>
-#include <numeric>
 #include <cstdio>
+#include <numeric>
+#include <random>
 
 constexpr int kWarpSize = 32;
 
@@ -67,8 +68,12 @@ void testSmallArgMax(Kernel kernel, CheckFunc checkFunc, int div, int N) {
     CUDA_CHECK(cudaMalloc(&aDev, N * sizeof(double)));
     CUDA_CHECK(cudaMalloc(&bDev, K * sizeof(Pair)));
 
-    for (int i = 0; i < N; ++i)
-        aHost[i] = (long long)i * i % 12345;
+    for (int i = 0; i < N; ++i) {
+        // aHost[i] = (long long)i * i % 12345;
+        aHost[i] = 10 * i;
+    }
+    std::mt19937 gen;
+    std::shuffle(aHost, aHost + N, gen);
     CUDA_CHECK(cudaMemcpy(aDev, aHost, N * sizeof(double), cudaMemcpyHostToDevice));
 
     const int threads = 1024;
@@ -95,8 +100,12 @@ void testLargeArgMax(const char *name, Func func, int N) {
     CUDA_CHECK(cudaMalloc(&aDev, N * sizeof(double)));
     CUDA_CHECK(cudaMalloc(&bDev, 1 * sizeof(Pair)));
 
-    for (int i = 0; i < N; ++i)
-        aHost[i] = (N + 13241LL * i * i) % 432141;
+    for (int i = 0; i < N; ++i) {
+        // aHost[i] = (N + 13241LL * i * i) % 432141;
+        aHost[i] = 10 * i;
+    }
+    std::mt19937 gen;
+    std::shuffle(aHost, aHost + N, gen);
     CUDA_CHECK(cudaMemcpy(aDev, aHost, N * sizeof(double), cudaMemcpyHostToDevice));
 
     func(aDev, bDev, N);
