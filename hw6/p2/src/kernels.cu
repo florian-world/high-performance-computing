@@ -88,6 +88,27 @@ __global__ void dimerizationKernel(
     isSampleDone[idx] = time >= endTime || isSampleDone[idx];
 }
 
+
+
+__device__ int countWarp(char isSampleDone) {
+
+    unsigned bitCounts = __ballot_sync(0xFFFFFFFF, isSampleDone);
+
+    return __popc(bitCounts);
+}
+
+// from Q1
+__device__ int sumWarp(int a) {
+    int sum = a;
+    sum += __shfl_xor_sync(0xFFFFFFFF, sum, 1);
+    sum += __shfl_xor_sync(0xFFFFFFFF, sum, 2);
+    sum += __shfl_xor_sync(0xFFFFFFFF, sum, 4);
+    sum += __shfl_xor_sync(0xFFFFFFFF, sum, 8);
+    sum += __shfl_xor_sync(0xFFFFFFFF, sum, 16);
+    return sum;
+}
+
+
 /// Store the sum of the subarray isSampleDone[1024*b : 1024*b+1023] in blocksDoneCount[b].
 __global__ void reduceIsDoneKernel(const char *isSampleDone, int *blocksDoneCount, int numSamples) {
     // TODO: Implement the reduction that computes how many samples in a block have completed.
@@ -100,6 +121,23 @@ __global__ void reduceIsDoneKernel(const char *isSampleDone, int *blocksDoneCoun
     // ...
     // ...
     // ...
+
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    char done = idx < numSamples ? isSampleDone[idx] : 0;
+
+    int count = countWarp(done);
+
+    __shared__ int sdata[32];
+
+    if (threadIdx.x % 32 == 0)
+        sdata[threadIdx.x / 32] = count;
+    __syncthreads();
+
+    if (threadIdx.x < 32)
+        count = sumWarp(sdata[threadIdx.x]);
+
+    if (threadIdx.x == 0)
+        blocksDoneCount[blockIdx.x] = count;
 }
 
 
