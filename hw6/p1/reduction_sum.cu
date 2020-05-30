@@ -1,4 +1,4 @@
-#include "utils.h"
+ #include "utils.h"
 #include <cassert>
 #include <algorithm>
 
@@ -10,7 +10,13 @@ __device__ double sumWarp(double a) {
     //            return the correct result.
     //            (although this function operates only on a single warp, it
     //            will be called with many threads for testing)
-    return 0.0;
+    double sum = a;
+    sum += __shfl_xor_sync(0xFFFFFFFF, sum, 1);
+    sum += __shfl_xor_sync(0xFFFFFFFF, sum, 2);
+    sum += __shfl_xor_sync(0xFFFFFFFF, sum, 4);
+    sum += __shfl_xor_sync(0xFFFFFFFF, sum, 8);
+    sum += __shfl_xor_sync(0xFFFFFFFF, sum, 16);
+    return sum;
 }
 
 /// Returns the sum of all values `a` within a block,
