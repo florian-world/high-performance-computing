@@ -95,11 +95,29 @@ __device__ Pair argMaxBlock(double a) {
     // TODO: 1.c) Compute the argmax of the given value.
     //            Return the maximum and the location of the maximum (0..1023).
     // NOTE: For 1.c) implement either this or `sumBlock`!
-    Pair result;
+    Pair result, blockResult;
     result.max = 0.0;
     result.idx = 0;
 
-    // ...
+    // we are sure that there are 1024 threads all with meaningful data
+    result = argMaxWarp(a);
+
+    __shared__ double sdata[32];
+    __shared__ int sdataidx[32];
+
+    if (threadIdx.x % 32 == 0)
+        sdata[threadIdx.x / 32] = result.max;
+        sdataidx[threadIdx.x / 32] = result.idx;
+    __syncthreads();
+
+    if (threadIdx.x < 32) {
+        blockResult = argMaxWarp(sdata[threadIdx.x]);
+    }
+
+    if (threadIdx.x == 0) {
+        result.max = blockResult.max;
+        result.idx = blockResult.idx*32 + sdataidx[blockResult.idx];
+    }
 
     return result;
 }

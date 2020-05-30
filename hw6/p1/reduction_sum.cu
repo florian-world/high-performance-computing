@@ -25,7 +25,21 @@ __device__ double sumBlock(double a) {
     // TODO: 1.c) Compute the sum of values `a` for all threads within a block.
     //            Only threadIdx.x == 0 has to return the correct result.
     // NOTE: For 1.c) implement either this or `argMaxBlock`!
-    return 0.0;
+
+    // we are sure that there are 1024 threads all with meaningful data
+    double result = sumWarp(a);
+
+    __shared__ double sdata[32];
+
+    if (threadIdx.x % 32 == 0)
+        sdata[threadIdx.x / 32] = result;
+    __syncthreads();
+
+    if (threadIdx.x < 32) {
+        result = sumWarp(sdata[threadIdx.x]);
+    }
+
+    return result;
 }
 
 /// Compute the sum of all values aDev[0]..aDev[N-1] for N <= 1024^2 and store the result to bDev[0].
