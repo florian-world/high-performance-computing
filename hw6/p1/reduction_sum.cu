@@ -91,9 +91,8 @@ void sum1M(const double *aDev, double *bDev, int N) {
     if (numBlocks > 1) {
         // need some memory to synchronize over blocks
         double* bufferDev;
-        CUDA_CHECK(cudaMalloc(&bufferDev, 1024 * sizeof(double)));
+        CUDA_CHECK(cudaMalloc(&bufferDev, numBlocks * sizeof(double)));
         CUDA_LAUNCH(sumReduce, numBlocks, 1024, aDev, bufferDev, N);
-        cudaDeviceSynchronize();
         CUDA_LAUNCH(sumReduce, 1, 1024, bufferDev, bDev, numBlocks);
         CUDA_CHECK(cudaFree(bufferDev));        
     } else {
