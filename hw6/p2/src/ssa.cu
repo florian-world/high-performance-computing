@@ -21,10 +21,15 @@ void SSA_GPU::run()
         fprintf(stderr, "Number of samples larger than 64M not supported (block limit reached).\n");
         exit(1);
     }
-    const long long memoryEstimate = 2ULL * numIters * threads * blocks * sizeof(float);
+    const long long memoryEstimate = 2ULL * numIters * threads * blocks * sizeof(float)
+                                + 2*(numBins + numBins * (threads+1) * blocks) * sizeof(double)
+                                + (numBins + numBins * (threads+1) * blocks) * sizeof(int);
     printf("SSA_GPU  numItersPerPass: %d  numSamples: %d  approx required memory: ~%.1fMB\n",
            numIters, numSamples, memoryEstimate / 1024. / 1024.);
 
+    double* trajSaThreadsDev, *trajSaBlocksDev;
+    double* trajSbThreadsDev, *trajSbBlocksDev;
+    int* trajNThreadsDev, *trajNBlocksDev;
     float *uDev;            // Uniform random values vector.
     short *xDev;            // Species vector.
     float *tDev;            // Time vector.
@@ -33,12 +38,19 @@ void SSA_GPU::run()
     int *perBlockDoneDev;   // perBlockDoneDev[blockIdx] = number of samples done in the block blockIdx.
     int *perBlockDoneHost;  // A host copy.
     CUDA_CHECK(cudaMalloc(&uDev, 2 * numIters * threads * blocks * sizeof(float)));
+    CUDA_CHECK(cudaMalloc(&uDev, 2 * numIters * threads * blocks * sizeof(float)));
     CUDA_CHECK(cudaMalloc(&xDev, NUM_SPECIES * numSamples * numIters * sizeof(short)));
     CUDA_CHECK(cudaMalloc(&tDev, numSamples * numIters * sizeof(float)));
     CUDA_CHECK(cudaMalloc(&itersDev,      numSamples * sizeof(int)));
     CUDA_CHECK(cudaMalloc(&isSampleDoneDev,      numSamples * sizeof(char)));
     CUDA_CHECK(cudaMalloc(&perBlockDoneDev,      blocks * sizeof(int)));
     CUDA_CHECK(cudaMallocHost(&perBlockDoneHost, blocks * sizeof(int)));
+    CUDA_CHECK(cudaMalloc(&trajSaThreadsDev, numBins * threads * blocks * sizeof(double)));
+    CUDA_CHECK(cudaMalloc(&trajSbThreadsDev, numBins * threads * blocks * sizeof(double)));
+    CUDA_CHECK(cudaMalloc(&trajNThreadsDev, numBins * threads * blocks * sizeof(int)));
+    CUDA_CHECK(cudaMalloc(&trajSaBlocksDev, numBins * blocks * sizeof(double)));
+    CUDA_CHECK(cudaMalloc(&trajSbBlocksDev, numBins * blocks * sizeof(double)));
+    CUDA_CHECK(cudaMalloc(&trajNBlocksDev, numBins * blocks * sizeof(int)));
 
     CUDA_CHECK(cudaMemset(itersDev,        0, numSamples * sizeof(int)));
     CUDA_CHECK(cudaMemset(isSampleDoneDev, 0, numSamples * sizeof(char)));
@@ -66,7 +78,8 @@ void SSA_GPU::run()
         // Evaluate up to `numIters` iterations.
         dimerizationKernel<<<blocks, threads>>>(
                 pass, uDev, xDev, tDev, itersDev, isSampleDoneDev,
-                endTime, omega, numIters, numSamples);
+                endTime, omega, numIters, numSamples,
+                trajSaThreadsDev,  trajSbThreadsDev,  trajNThreadsDev, numBins, dtBin);
 
         // TODO: Implement the binning mechanism.
         //       Use the sample trajectories xDev (which store Sa and Sb), tDev
@@ -100,6 +113,13 @@ void SSA_GPU::run()
             break;
     }
 
+    reduceTrajectoriesKernel<<<blocks, threads>>>(trajSaThreadsDev,  trajSbThreadsDev,  trajNThreadsDev,
+        trajSaBlocksDev,  trajSbBlocksDev,  trajNBlocksDev, numBins);
+
+
+    CUDA_CHECK(cudaMemcpy(trajSa.data(), trajSaBlocksDev, numBins * sizeof(double), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(trajSb.data(), trajSbBlocksDev, numBins * sizeof(double), cudaMemcpyDeviceToHost));
+    CUDA_CHECK(cudaMemcpy(trajNumSteps.data(), trajNBlocksDev, numBins * sizeof(int), cudaMemcpyDeviceToHost));
 
     // TODO: Averaging. Store the result in trajSa, trajSb and trajNumSteps.
     //          trajSa[k] = average Sa in the time bin k
@@ -110,6 +130,12 @@ void SSA_GPU::run()
 
     // TODO: Deallocate all extra buffers you allocated.
 
+    CUDA_CHECK(cudaFree(trajSaThreadsDev));
+    CUDA_CHECK(cudaFree(trajSbThreadsDev));
+    CUDA_CHECK(cudaFree(trajNThreadsDev));
+    CUDA_CHECK(cudaFree(trajSaBlocksDev));
+    CUDA_CHECK(cudaFree(trajSbBlocksDev));
+    CUDA_CHECK(cudaFree(trajNBlocksDev));
     CUDA_CHECK(cudaFreeHost(perBlockDoneHost));
     CUDA_CHECK(cudaFree(perBlockDoneDev));
     CUDA_CHECK(cudaFree(isSampleDoneDev));
