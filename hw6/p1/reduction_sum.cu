@@ -43,21 +43,35 @@ __device__ double sumBlock(double a) {
 }
 
 __global__ void sumReduce(const double *aDev, double *bDev, int N) {
-    bDev[0] = 0.0f;
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    // printf("IDX = %d\n", idx);
     double a = idx < N ? aDev[idx] : 0.0;
+
+    // if (gridDim.x == 1 && a > 0.0) {
+    //     printf("Idx = %2d, value = %f\n", idx, a);
+    // }
+
+    // if (threadIdx.x < 32) printf("%3d my value: %f\n", threadIdx.x, a);
 
     double sum = sumBlock(a);
 
-    if (threadIdx.x == 0)
-        atomicAdd(bDev, sum);
+    if (threadIdx.x == 0) {
+        bDev[blockIdx.x] = sum;
+    }
+
+//     if (threadIdx.x == 0)
+//         atomicAdd(bDev, sum);
 }
 
 /// Compute the sum of all values aDev[0]..aDev[N-1] for N <= 1024^2 and store the result to bDev[0].
 void sum1M(const double *aDev, double *bDev, int N) {
     assert(N <= 1024 * 1024);
 
-    printf("N = %d\n", N);
+    // TODO: 1.d) Implement either this or `argMax1M`.
+    //            Avoid copying any data back to the host.
+    //            Hint: The solution requires more CUDA operations than just
+    //            calling a single kernel. Feel free to use whatever you find
+    //            necessary.
 
     int numBlocks = (N+1024-1)/1024;
 
@@ -65,25 +79,26 @@ void sum1M(const double *aDev, double *bDev, int N) {
     cudaDeviceProp prop;
     cudaGetDevice(&device);
     cudaGetDeviceProperties(&prop, device);
-    printf("Cuda compute capability: %d.%d\n", prop.major, prop.minor);
+    // printf("Cuda compute capability: %d.%d\n", prop.major, prop.minor);
     
-    // const int threadsPerBlock = prop.maxThreadsPerBlock;
-
     if (numBlocks > prop.maxGridSize[0]) {
-        printf(
-            "Grid size <%d> exceeds the device capability <%d>", numBlocks, prop.maxGridSize[0]);
+        fprintf(stderr, "Grid size %d exceeds the device capability %d", numBlocks, prop.maxGridSize[0]);
+        return;
     }
 
     // bDev[0] = 0.0f;
 
-    CUDA_LAUNCH(sumReduce, numBlocks, 1024, aDev, bDev, N);
-    // TODO: 1.d) Implement either this or `argMax1M`.
-    //            Avoid copying any data back to the host.
-    //            Hint: The solution requires more CUDA operations than just
-    //            calling a single kernel. Feel free to use whatever you find
-    //            necessary.
-
-
+    if (numBlocks > 1) {
+        // need some memory to synchronize over blocks
+        double* bufferDev;
+        CUDA_CHECK(cudaMalloc(&bufferDev, 1024 * sizeof(double)));
+        CUDA_LAUNCH(sumReduce, numBlocks, 1024, aDev, bufferDev, N);
+        cudaDeviceSynchronize();
+        CUDA_LAUNCH(sumReduce, 1, 1024, bufferDev, bDev, numBlocks);
+        CUDA_CHECK(cudaFree(bufferDev));        
+    } else {
+        CUDA_LAUNCH(sumReduce, 1, 1024, aDev, bDev, N);
+    }
 }
 
 
