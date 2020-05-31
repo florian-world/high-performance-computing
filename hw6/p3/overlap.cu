@@ -83,21 +83,13 @@ void runAsync(const char *kernelName, Kernel kernel, int N, int chunkSize, int n
         //
         //           Note: you can use CUDA_CHECK and CUDA_LAUNCH_EX from
         //           utils.h for error checking.
-
-
-        // error @  12500000
-        //     N = 100000000
-        // chunk = 100000000
         
         int curStream = 0;
 
-        printf("Launching with chunkSize %d, numStreams = %d, N = %d\n", chunkSize, numStreams, N);
         for (int j = 0; j < N; j += chunkSize) {
             int curSize = std::min(chunkSize, N - j);
 
-            printf("Treating %d now\n", curSize);
-
-            CUDA_CHECK(cudaMemcpyAsync(aDev + j, aHost + j, curSize, cudaMemcpyHostToDevice, streams[curStream]));
+            CUDA_CHECK(cudaMemcpyAsync(aDev + j, aHost + j, curSize * sizeof(double), cudaMemcpyHostToDevice, streams[curStream]));
             int threads = 1024;
             int maxBlocks = 65'536;
             int blocks = (curSize + threads - 1) / threads;
@@ -105,12 +97,12 @@ void runAsync(const char *kernelName, Kernel kernel, int N, int chunkSize, int n
                 int curN = std::min(maxBlocks*threads, N -j - i*threads);
                 int curStart = j + i * threads;
                 int curBlocks = std::min(maxBlocks, blocks - i);
-                printf("Launching kernel in stream %3d to compute from %12d to  %12d with %4d threads and %5d blocks on data of size %12d\n",
-                curStream, curStart, curStart + curN - 1, threads, curBlocks, curN);
+                // printf("Launching kernel in stream %3d to compute from %12d to  %12d with %4d threads and %5d blocks on data of size %12d\n",
+                //         curStream, curStart, curStart + curN - 1, threads, curBlocks, curN);
                 CUDA_LAUNCH_EX(kernel, curBlocks, threads, 0, streams[curStream],
                                aDev + curStart, bDev + curStart, curN);
             }
-            CUDA_CHECK(cudaMemcpyAsync(bHost + j, bDev + j, curSize, cudaMemcpyDeviceToHost, streams[curStream]));
+            CUDA_CHECK(cudaMemcpyAsync(bHost + j, bDev + j, curSize * sizeof(double), cudaMemcpyDeviceToHost, streams[curStream]));
 
             curStream = (curStream + 1) % numStreams;
         }
