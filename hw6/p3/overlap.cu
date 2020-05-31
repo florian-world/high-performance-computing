@@ -44,15 +44,34 @@ void checkResults(const double *bHost, int N) {
 /// kernel and copy the result back.
 template <typename Kernel>
 void runAsync(const char *kernelName, Kernel kernel, int N, int chunkSize, int numStreams) {
-    double *aHost;
-    double *bHost;
+    double *aHost, *aDev;
+    double *bHost, *bDev;
 
     CUDA_CHECK(cudaMallocHost(&aHost, N * sizeof(double)));
     CUDA_CHECK(cudaMallocHost(&bHost, N * sizeof(double)));
     for (int i = 0; i < N; ++i)
         aHost[i] = 10.0 * i;
 
+    cudaStream_t* streams = new cudaStream_t[numStreams];
+
+    for (int i = 0; i < numStreams; ++i)
+        cudaStreamCreate(streams + i);
+
     // TODO 3.a) Allocate chunks and create streams.
+
+    // cudaStream_t stream; // Declaring the stream variable
+    // cudaStreamCreate(&stream); // Creating the stream
+    // // Assigning Stream to kernel launch
+    // myKernel<<grid, shmem, stream>>(args);
+    // // Checking if the stream has finished
+    // if (cudaStreamQuery(stream) == cudaSuccess) cout << "Finished";
+    // // Waiting for finalization
+    // cudaStreamSynchronize(stream);
+    // // De-allocating memory
+    // cudaStreamDestroy(stream);
+
+    CUDA_CHECK(cudaMalloc(&aDev, N * sizeof(double)));
+    CUDA_CHECK(cudaMalloc(&bDev, N * sizeof(double)));
 
 
     // Instead of benchmark() we use a simplified measure() which invokes the
@@ -65,6 +84,40 @@ void runAsync(const char *kernelName, Kernel kernel, int N, int chunkSize, int n
         //           Note: you can use CUDA_CHECK and CUDA_LAUNCH_EX from
         //           utils.h for error checking.
 
+
+        // error @  12500000
+        //     N = 100000000
+        // chunk = 100000000
+        
+        int curStream = 0;
+
+        printf("Launching with chunkSize %d, numStreams = %d, N = %d\n", chunkSize, numStreams, N);
+        for (int j = 0; j < N; j += chunkSize) {
+            int curSize = std::min(chunkSize, N - j);
+
+            printf("Treating %d now\n", curSize);
+
+            CUDA_CHECK(cudaMemcpyAsync(aDev + j, aHost + j, curSize, cudaMemcpyHostToDevice, streams[curStream]));
+            int threads = 1024;
+            int maxBlocks = 65'536;
+            int blocks = (curSize + threads - 1) / threads;
+            for (int i = 0; i < blocks; i += maxBlocks) {
+                int curN = std::min(maxBlocks*threads, N -j - i*threads);
+                int curStart = j + i * threads;
+                int curBlocks = std::min(maxBlocks, blocks - i);
+                printf("Launching kernel in stream %3d to compute from %12d to  %12d with %4d threads and %5d blocks on data of size %12d\n",
+                curStream, curStart, curStart + curN - 1, threads, curBlocks, curN);
+                CUDA_LAUNCH_EX(kernel, curBlocks, threads, 0, streams[curStream],
+                               aDev + curStart, bDev + curStart, curN);
+            }
+            CUDA_CHECK(cudaMemcpyAsync(bHost + j, bDev + j, curSize, cudaMemcpyDeviceToHost, streams[curStream]));
+
+            curStream = (curStream + 1) % numStreams;
+        }
+
+        for (int i = 0; i < numStreams; ++i)
+            cudaStreamSynchronize(streams[i]);
+
         // TODO 3.b) Synchronize the streams.
     });
 
@@ -75,6 +128,12 @@ void runAsync(const char *kernelName, Kernel kernel, int N, int chunkSize, int n
 
     // TODO: 3.a) Deallocate chunks and destroy streams.
 
+    for (int i = 0; i < numStreams; ++i)
+        cudaStreamDestroy(streams[i]);
+    delete[] streams;
+
+    CUDA_CHECK(cudaFree(aDev));
+    CUDA_CHECK(cudaFree(bDev));
     CUDA_CHECK(cudaFreeHost(bHost));
     CUDA_CHECK(cudaFreeHost(aHost));
 }
@@ -112,7 +171,7 @@ void runSync(const char *kernelName, Kernel kernel, int N) {
         int blocks = (N + threads - 1) / threads;
         for (int i = 0; i < blocks; i += maxBlocks) {
             CUDA_LAUNCH(kernel, std::min(maxBlocks, blocks - i), threads,
-                        aDev + i * threads, bDev + i * threads, N);
+                        aDev + i * threads, bDev + i * threads, std::min(maxBlocks*threads, N - i*threads));
         }
     });
     // Device -> host.
