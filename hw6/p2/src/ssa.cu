@@ -22,8 +22,8 @@ void SSA_GPU::run()
         exit(1);
     }
     const long long memoryEstimate = 2ULL * numIters * threads * blocks * sizeof(float)
-                                + 2*(numBins + numBins * (threads+1) * blocks) * sizeof(double)
-                                + (numBins + numBins * (threads+1) * blocks) * sizeof(int);
+                                + 2*(numBins * (threads+1) * blocks) * sizeof(double)
+                                + (numBins * (threads+1) * blocks) * sizeof(int);
     printf("SSA_GPU  numItersPerPass: %d  numSamples: %d  approx required memory: ~%.1fMB\n",
            numIters, numSamples, memoryEstimate / 1024. / 1024.);
 
