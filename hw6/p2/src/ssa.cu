@@ -54,6 +54,9 @@ void SSA_GPU::run()
 
     CUDA_CHECK(cudaMemset(itersDev,        0, numSamples * sizeof(int)));
     CUDA_CHECK(cudaMemset(isSampleDoneDev, 0, numSamples * sizeof(char)));
+    CUDA_CHECK(cudaMemset(trajSaBlocksDev, 0.0, numBins * blocks * sizeof(double)));
+    CUDA_CHECK(cudaMemset(trajSbBlocksDev, 0.0, numBins * blocks * sizeof(double)));
+    CUDA_CHECK(cudaMemset(trajNBlocksDev, 0, numBins * blocks * sizeof(int)));
 
     curandGenerator_t generator;
 
