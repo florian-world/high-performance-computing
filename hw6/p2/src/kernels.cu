@@ -138,7 +138,6 @@ __device__ T sumBlock(T a) {
     return result;
 }
 
-
 template __device__  int sumWarp<int>(int a);
 template __device__  double sumWarp<double>(double a);
 template __device__  int sumBlock<int>(int a);
@@ -222,9 +221,10 @@ __global__ void reduceTrajectoriesKernel(double* trajSaThreads, double* trajSbTh
         assert(gridDim.x < blockDim.x);
 
         if (blockIdx.x == 0) {
-            Sa = idx * blockDim.x < nbins ? trajSaBlocks[i + idx*nbins] : 0.0;
-            Sb = idx * blockDim.x < nbins ? trajSbBlocks[i + idx*nbins] : 0.0;
-            n = idx * blockDim.x < nbins ? ntrajBlocks[i + idx*nbins] : 0;
+            Sa = idx < gridDim.x ? trajSaBlocks[i + idx*nbins] : 0.0;
+            Sb = idx < gridDim.x ? trajSbBlocks[i + idx*nbins] : 0.0;
+            n = idx < gridDim.x ? ntrajBlocks[i + idx*nbins] : 0;
+
             sumSa = sumBlock(Sa);
             sumSb = sumBlock(Sb);
             sumN = sumBlock(n);
