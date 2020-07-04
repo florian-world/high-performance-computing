@@ -1,0 +1,33 @@
+HOW TO RUN
+----------
+To run the code on Euler remove all previously loaded nodules (purge) and load the following modules:
+
+module purge; 
+module load new; 
+module load gcc; 
+module load open_mpi/3.0.0; 
+module load hdf5
+
+You can request 8 cores and an interative shell to work with:
+bsub -n 8 -W  04:00 -Is bash
+
+Then compile and run by typing
+make run
+
+
+WHAT TO MODIFY
+--------------
+You only need to change the code in wave.cpp
+When the code runs, it prints a checksum. This number should be the same for the solution you provide.
+
+
+CODE OUTPUT 
+-----------
+You are not asked to visualize any results in this question, but we thought I'd be nice if you can see what you are actually solving.
+Other outputs are .h5 files which can be used to visualize the solution. Each .h5 file corresponds to an .xmf file.
+You can use Paraview to open the .xmf files and visualize the results.
+Alternatively, you may comment out the line
+#define USE_HDF5
+with '//' in wave.h. In this case, the code will output simple .txt files with the solution, saved as
+x y z u
+...

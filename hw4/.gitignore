@@ -1,0 +1,8 @@
+ssa
+cmaes
+*.o
+*.txt
+*.swp
+*.orig
+
+_korali_result

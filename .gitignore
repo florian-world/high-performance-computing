@@ -9,6 +9,7 @@
 *.so.*
 *.dll
 *.dylib
+!hw4/p3/factor.a
 
 # Qt-es
 object_script.*.Release
@@ -29,6 +30,7 @@ ui_*.h
 *.jsc
 */build/*
 */*/build/*
+*build*
 *.qm
 *.prl
 
@@ -50,4 +52,4 @@ compile_commands.json
 
 # QtCreator local machine specific files for imported projects
 *creator.user*
-ex6_pse/data/*
+
