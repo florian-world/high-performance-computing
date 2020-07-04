@@ -9,7 +9,7 @@
 *.so.*
 *.dll
 *.dylib
-!hw4/p3/factor.a
+!2020-hpc-ii/hw4/p3/factor.a
 
 # Qt-es
 object_script.*.Release
